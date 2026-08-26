@@ -1,12 +1,3 @@
----
-title: Chromeway CRM Demo
-emoji: 🎨
-colorFrom: gray
-colorTo: brown
-sdk: docker
-app_port: 3000
-pinned: false
----
 
 # Chromeway CRM — User & Setup Guide
 
@@ -47,7 +38,7 @@ npm run dev                 # start the app → http://localhost:3000
 
 ### 🌐 Free online demo (prototype)
 
-This repo ships with a one-command free hosting recipe (Hugging Face Spaces + Neon Postgres, €0/month): see **[DEPLOY_DEMO.md](./DEPLOY_DEMO.md)** and `.env.demo.example`.
+This repo ships with a €0/month hosting recipe (Render free Docker + Neon Postgres): see **[DEPLOY_DEMO.md](./DEPLOY_DEMO.md)** and `.env.demo.example`.
 
 ---
 

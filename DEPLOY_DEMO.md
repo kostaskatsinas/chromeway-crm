@@ -1,56 +1,56 @@
-# Deploy the free online demo (Hugging Face Spaces + Neon)
+# Deploy the free online demo (Render + Neon)
 
-Total cost: **€0** · Time: ~30 minutes (mostly waiting for builds) · No credit card.
+Total cost: **€0** · Time: ~20 minutes · No credit card required.
 
 ```
-Visitors → https://<your-user>-chromeway-demo.hf.space
+Visitors → https://chromeway-demo.onrender.com
                     │
-             HF Space (this repo, Docker)
+       Render web service (this repo, Docker, free)
                     │
              Neon Postgres (free, data persists)
 ```
+
+> Why this stack: Hugging Face moved Docker Spaces behind a paid plan (July 2026).
+> Render's free tier runs Docker images permanently; Render's *own* free database
+> expires after 30 days — so we use Neon instead, which is free forever.
 
 ---
 
 ## 1. Create the accounts (~5 min)
 
-Sign in with GitHub on all three — no new passwords:
+Sign in with GitHub on all three:
 
-- [ ] [huggingface.co/join](https://huggingface.co/join)
-- [ ] [neon.tech](https://neon.tech/signup) → **New project** → name `chromeway` → region **EU Central** → Create. Copy the **connection string** (pooled), keep `?sslmode=require`.
-- [ ] HF access token for pushing: [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) → **New token** → type **Write**.
+- [ ] [render.com](https://dashboard.render.com/register)
+- [ ] [neon.tech](https://neon.tech/signup) → **New project** → name `chromeway` → region **EU Central** → copy the **connection string** (keep `?sslmode=require`)
+- [ ] [uptimerobot.com](https://uptimerobot.com) (optional, keeps the demo awake)
 
-## 2. Configure secrets on the Space (~3 min)
+## 2. Create the web service (~5 min)
 
-- [ ] [huggingface.co/new-space](https://huggingface.co/new-space) → Space name `chromeway-demo` → SDK: **Docker** → Blank → **Public** → Create.
-- [ ] Space → **Settings → Variables and secrets**:
+- [ ] Render dashboard → **New → Web Service** → connect the GitHub repo `chromeway-crm`
+- [ ] Settings:
 
-| Type | Name | Value |
-|---|---|---|
-| Secret | `DATABASE_URL` | your Neon connection string |
-| Secret | `AUTH_SECRET` | output of `openssl rand -hex 32` |
-| Variable | `DEMO_AUTOSEED` | `true` |
+| Field | Value |
+|---|---|
+| Runtime | **Docker** (uses the repo's `Dockerfile`) |
+| Instance type | **Free** |
+| Health check path | `/api/health` |
+| Env var `DATABASE_URL` | your Neon connection string |
+| Env var `AUTH_SECRET` | output of `openssl rand -hex 32` |
+| Env var `DEMO_AUTOSEED` | `true` |
+| Env var `APP_URL` | `https://chromeway-demo.onrender.com` (your URL) |
 
-> `DEMO_AUTOSEED=true` seeds the Greek demo dataset automatically on first boot — but only if the database has zero users, so it never wipes anything.
+- [ ] **Create Web Service.** First build takes ~5–8 min. On boot the container
+      applies migrations and — because the database is empty — seeds the Greek
+      demo dataset automatically (`DEMO_AUTOSEED` only ever seeds an empty
+      database; it never wipes existing data).
 
-## 3. Push the code (~2 min + 5–10 min build)
+## 3. Keep it awake (recommended)
 
-```bash
-cd ~/Documents/crm_chromeway
-git remote add space https://huggingface.co/spaces/YOUR_USER/chromeway-demo
-git push space main --force     # username = your HF user, password = the WRITE token
-```
+Free Render services sleep after 15 minutes idle; waking takes ~60 seconds — awkward mid-presentation.
 
-The Space builds the root `Dockerfile`, applies migrations and auto-seeds on boot.
-Watch progress in the Space's **Logs → Building** tab. First boot seeds ~15 records of demo data.
+- [ ] UptimeRobot → **Add new monitor** → HTTP(s) → `https://chromeway-demo.onrender.com/api/health` → interval **5 minutes**.
 
-## 4. Keep it awake (optional but recommended)
-
-HF Spaces sleep after 48 h without traffic; a sleeping prototype takes ~2 min to wake mid-presentation.
-
-- [ ] [uptimerobot.com](https://uptimerobot.com) → Add monitor → HTTP(s) → `https://YOUR_USER-chromeway-demo.hf.space/api/health` → every 60 min.
-
-## 5. Demo credentials
+## 4. Demo credentials
 
 | Email | Password |
 |---|---|
@@ -58,22 +58,29 @@ HF Spaces sleep after 48 h without traffic; a sleeping prototype takes ~2 min to
 | pm@chromeway.gr | `Chromeway2026!` |
 | logistis@chromeway.gr | `Chromeway2026!` |
 
-Also try the customer-facing quotation link: `/public-quote/demo-token-kyma-sent`
+Customer-facing quotation link: `/public-quote/demo-token-kyma-sent`
 
 ---
 
-## Troubleshooting
+## Free-tier trade-offs (fine for a prototype)
 
-| Symptom | Cause / fix |
-|---|---|
-| Build fails at `COPY public` | You pushed an old commit — ensure `.gitkeep` exists in `public/` and push again |
-| App builds but shows "Database unavailable" | `DATABASE_URL` secret typo, or Neon project suspended → open neon.tech once to reactivate |
-| Seed didn't run | Database already had a user; set it manually or wipe the Neon branch/DB |
-| Wake-up takes 2 min | Space was sleeping (48 h without requests) → check UptimeRobot is enabled |
-| Uploaded photos disappear after restart | Expected on the free tier — files live on ephemeral disk |
+- **Uploads are ephemeral** — photos added in the demo vanish when the service
+  sleeps/redeploys. Everything in Neon (pipeline, quotes, projects) persists.
+- **Cold start ~60s** if the keep-alive monitor is off or fails.
+- 512 MB RAM / shared CPU — snappy enough for one viewer at a time.
 
 ## Updating the demo later
 
 ```bash
-git add . && git commit -m "…" && git push origin main && git push space main
+git add . && git commit -m "…" && git push origin main
 ```
+Render auto-deploys every push to `main`.
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| Build fails at `COPY public` | Old commit — ensure `public/.gitkeep` exists and redeploy |
+| "Database unavailable" screen | `DATABASE_URL` typo, or Neon project suspended → open neon.tech to reactivate |
+| Seed didn't run | Database already had a user (auto-seed is deliberately non-destructive) — delete the Neon database/branch and redeploy to start fresh |
+| First request slow | Cold start — enable the UptimeRobot monitor |
