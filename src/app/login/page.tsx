@@ -13,6 +13,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(false);
+  const [errText, setErrText] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
@@ -27,7 +28,8 @@ export default function LoginPage() {
       } else {
         setError(true);
       }
-    } catch {
+    } catch (e) {
+      setErrText(String((e as Error).message));
       setError(true);
     } finally {
       setBusy(false);
@@ -79,7 +81,7 @@ export default function LoginPage() {
               <label className="label">{t("auth.password")}</label>
               <Input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
             </div>
-            {error && <p className="text-rust text-[13px]">{t("auth.invalidCredentials")}</p>}
+            {error && <p className="text-rust text-[13px]">{errText ?? t("auth.invalidCredentials")}</p>}
             <Button type="submit" disabled={busy} className="w-full">
               {busy ? t("common.loading") : t("auth.signIn")}
             </Button>

@@ -44,7 +44,8 @@ export function handler(
         return fail(`${first.path.join(".")}: ${first.message}`, 422);
       }
       console.error("[api]", err);
-      return fail("SERVER_ERROR", 500);
+      const detail = process.env.DEBUG_API === "true" && err instanceof Error ? ` — ${err.message}` : "";
+      return fail(`SERVER_ERROR${detail}`, 500);
     }
   };
   return wrapped as WrappedHandler;
