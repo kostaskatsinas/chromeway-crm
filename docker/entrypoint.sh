@@ -4,10 +4,16 @@
 # then starts Next.js. Used by both VPS and Hugging Face Spaces.
 set -e
 
-echo "[entrypoint] applying database migrations…"
-# Neon pattern: run migrations through the DIRECT endpoint (DIRECT_URL) when
-# provided, because PgBouncer transaction mode limits session features.
-npx prisma migrate deploy --url "${DIRECT_URL:-$DATABASE_URL}"
+# Neon pattern: run migrations through the DIRECT endpoint when DIRECT_URL is
+# provided (PgBouncer transaction mode limits some session features). The env
+# override works because schema.prisma reads env("DATABASE_URL").
+if [ -n "$DIRECT_URL" ]; then
+  echo "[entrypoint] applying database migrations (direct endpoint)…"
+  DATABASE_URL="$DIRECT_URL" npx prisma migrate deploy
+else
+  echo "[entrypoint] applying database migrations…"
+  npx prisma migrate deploy
+fi
 
 if [ "$DEMO_AUTOSEED" = "true" ]; then
   echo "[entrypoint] DEMO_AUTOSEED=true → checking whether database is empty…"
