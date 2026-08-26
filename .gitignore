@@ -1,0 +1,21 @@
+# dependencies
+node_modules/
+
+# build output
+.next/
+out/
+tsconfig.tsbuildinfo
+next-env.d.ts
+
+# environment & secrets
+.env
+.env*.local
+
+# runtime data
+uploads/
+backups/
+*.log
+
+# misc
+.DS_Store
+*.pem

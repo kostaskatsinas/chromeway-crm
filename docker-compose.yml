@@ -1,0 +1,46 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: chromeway-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: chromeway
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: chromeway
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - chromeway_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chromeway"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build: .
+    container_name: chromeway-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://chromeway:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/chromeway
+      AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in .env}
+      CRON_SECRET: ${CRON_SECRET:?Set CRON_SECRET in .env}
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    volumes:
+      - chromeway_uploads:/app/uploads
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health | grep -o healthy || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  chromeway_pgdata:
+  chromeway_uploads:

@@ -1,0 +1,1175 @@
+// Chromeway CRM — PostgreSQL schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────── Enums ───────────────────────────
+
+enum Role {
+  ADMIN
+  SALES
+  PROJECT_MANAGER
+  TECHNICIAN
+  ACCOUNTANT
+  COLLABORATOR
+}
+
+enum BusinessType {
+  PRIVATE_CUSTOMER
+  ARCHITECT
+  INTERIOR_DESIGNER
+  CONTRACTOR
+  HOTEL
+  RESTAURANT
+  RETAIL_BUSINESS
+  OFFICE
+  OTHER_BUSINESS
+}
+
+enum LeadSource {
+  WEBSITE
+  REFERRAL
+  INSTAGRAM
+  FACEBOOK
+  GOOGLE_SEARCH
+  WALK_IN
+  EXHIBITION
+  PARTNER
+  COLD_OUTREACH
+  REPEAT_CUSTOMER
+  OTHER
+}
+
+enum GreekRegion {
+  ATTICA
+  PELOPONNESE
+  STEREA_ELLADA
+  THESSALY
+  EPIRUS
+  MACEDONIA
+  THRACE
+  IONIAN_ISLANDS
+  AEGEAN_ISLANDS
+  CRETE
+  OTHER_REGION
+}
+
+enum PipelineStage {
+  NEW_LEAD
+  CONTACTED
+  QUALIFIED
+  SITE_VISIT_PLANNED
+  SAMPLE_REQUESTED
+  QUOTATION_PREPARATION
+  QUOTATION_SENT
+  NEGOTIATION
+  WON
+  LOST
+  ON_HOLD
+}
+
+enum LossReason {
+  PRICE_TOO_HIGH
+  TIMING
+  CHOSE_COMPETITOR
+  NO_BUDGET
+  NOT_A_FIT
+  WENT_SILENT
+  PROJECT_CANCELLED
+  OTHER_REASON
+}
+
+enum VisitStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum SampleStatus {
+  REQUESTED
+  IN_PRODUCTION
+  DELIVERED
+  APPROVED
+  REJECTED
+  SUPERSEDED
+}
+
+enum FinishCategory {
+  VENETIAN_PLASTER
+  MICROCEMENT
+  METALLIC_EFFECT
+  TEXTURED_PLASTER
+  WOOD_EFFECT
+  CONCRETE_EFFECT
+  PATINA_ANTIQUE
+  STENCIL_RELIEF
+  GILDING_METAL_LEAF
+  RUST_OXIDATION
+  PROTECTIVE_COATING
+  CUSTOM_CONSTRUCTION
+  OTHER_FINISH
+}
+
+enum GlossLevel {
+  MATTE
+  DEEP_MATTE
+  SATIN
+  SEMI_GLOSS
+  GLOSS
+}
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  VIEWED
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+enum QuoteItemType {
+  FINISH_APPLICATION
+  SURFACE_PREPARATION
+  MATERIAL
+  LABOUR
+  TRAVEL_TRANSPORT
+  ACCOMMODATION
+  EQUIPMENT
+  SUBCONTRACTOR
+  CUSTOM_ITEM
+}
+
+enum ProjectStatus {
+  PLANNING
+  SCHEDULED
+  IN_PROGRESS
+  ON_HOLD_PROJECT
+  QUALITY_CONTROL
+  COMPLETED
+  CANCELLED
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS_TASK
+  DONE
+  CANCELLED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum EventType {
+  SITE_VISIT_EVENT
+  SAMPLE_PRODUCTION
+  PROJECT_WORK
+  DELIVERY
+  CUSTOMER_MEETING
+  PAYMENT_DEADLINE
+  FOLLOW_UP_TASK
+  INTERNAL_MEETING
+  OTHER_EVENT
+}
+
+enum RecurrenceFreq {
+  NONE
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum Unit {
+  SQM
+  LINEAR_M
+  PIECE
+  KG
+  LITER
+  HOUR
+  DAY
+  LOT
+}
+
+enum StockMovementType {
+  PURCHASE_IN
+  CONSUMPTION_OUT
+  RESERVATION
+  RELEASE
+  ADJUSTMENT
+  RETURN
+}
+
+enum ReservationStatus {
+  RESERVED
+  CONSUMED
+  RELEASED
+}
+
+enum ExpenseCategory {
+  MATERIALS_EXPENSE
+  SUBCONTRACTOR
+  TRAVEL_EXPENSE
+  ACCOMMODATION_EXPENSE
+  EQUIPMENT_RENTAL
+  TOOLS
+  CONSUMABLES
+  TRANSPORT
+  PERMITS_FEES
+  INSURANCE
+  OFFICE_OTHER
+}
+
+enum InvoiceKind {
+  PROFORMA
+  FINAL
+  CREDIT_NOTE
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  WRITTEN_OFF
+  CANCELLED
+}
+
+enum PaymentMethod {
+  BANK_TRANSFER
+  CARD
+  CASH
+  CHEQUE
+  WEB_BANKING
+  OTHER_METHOD
+}
+
+enum ActivityKind {
+  CALL
+  EMAIL
+  SMS
+  MEETING_LOG
+  NOTE
+  SYSTEM
+}
+
+enum NotificationType {
+  TASK_DUE
+  VISIT_UPCOMING
+  QUOTE_STALE
+  QUOTE_ACCEPTED
+  QUOTE_REJECTED
+  PAYMENT_OVERDUE
+  PAYMENT_UPCOMING
+  STOCK_LOW
+  PROJECT_OVER_COST
+  PROJECT_OVER_TIME
+  FEEDBACK_REQUEST
+  LEAD_UNANSWERED
+  SCHEDULE_CHANGED
+  GENERIC
+}
+
+// ─────────────────────────── Auth & Org ───────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  firstName     String
+  lastName      String
+  phone         String?
+  role          Role      @default(SALES)
+  hourlyRate    Decimal   @default(0) @map("hourly_rate")
+  color         String    @default("#8a7968")
+  active        Boolean   @default(true)
+  lastLoginAt   DateTime? @map("last_login_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+
+  ownedContacts         Contact[]           @relation("ContactOwner")
+  assignments           Opportunity[]       @relation("OpportunityAssignee")
+  visitsAssigned        SiteVisit[]         @relation("VisitAssignee")
+  projectsManaged       Project[]           @relation("ProjectManager")
+  tasks                 ProjectTask[]
+  workLogs              WorkLog[]
+  events                CalendarEvent[]
+  activities            Activity[]
+  comments              Comment[]
+  notifications         Notification[]
+  auditLogs             AuditLog[]
+  samplesProduced       Sample[]
+  quotationsCreated     Quotation[]         @relation("QuotationAuthor")
+  expensesCreatedBy     Expense[]
+  filesUploaded         File[]
+  resetTokens           PasswordResetToken[]
+
+  @@map("users")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
+}
+
+model Setting {
+  id        String @id @default(cuid())
+  data      Json   // single-row JSON document of company/financial preferences
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
+}
+
+// ─────────────────────────── Contacts ───────────────────────────
+
+model Company {
+  id           String       @id @default(cuid())
+  name         String
+  businessType BusinessType @default(OTHER_BUSINESS) @map("business_type")
+  vatNumber    String?      @map("vat_number")
+  taxOffice    String?      @map("tax_office")
+  email        String?
+  phone        String?
+  website      String?
+  street       String?
+  city         String?
+  postalCode   String?      @map("postal_code")
+  region       GreekRegion  @default(ATTICA)
+  notes        String?
+  tags         String[]     @default([])
+  customFields Json         @default("{}") @map("custom_fields")
+  createdById  String?      @map("created_by_id")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+  deletedAt    DateTime?    @map("deleted_at")
+
+  contacts      Contact[]
+  opportunities Opportunity[]
+  quotations    Quotation[]
+  projects      Project[]
+  invoices      Invoice[]
+
+  @@map("companies")
+}
+
+model Contact {
+  id               String       @id @default(cuid())
+  companyId        String?      @map("company_id")
+  firstName        String       @map("first_name")
+  lastName         String       @map("last_name")
+  email            String?
+  phone            String?
+  mobile           String?
+  position         String?
+  businessType     BusinessType @default(PRIVATE_CUSTOMER) @map("business_type")
+  leadSource       LeadSource   @default(OTHER) @map("lead_source")
+  referredBy       String?      @map("referred_by")
+  street           String?
+  city             String?
+  postalCode       String?      @map("postal_code")
+  region           GreekRegion  @default(ATTICA)
+  preferredLanguage String      @default("el") @map("preferred_language")
+  gdprConsent      Boolean      @default(false) @map("gdpr_consent")
+  gdprConsentAt    DateTime?    @map("gdpr_consent_at")
+  marketingOptIn   Boolean      @default(false) @map("marketing_opt_in")
+  notes            String?
+  tags             String[]     @default([])
+  customFields     Json         @default("{}") @map("custom_fields")
+  ownerUserId      String?      @map("owner_user_id")
+  createdAt        DateTime     @default(now()) @map("created_at")
+  updatedAt        DateTime     @updatedAt @map("updated_at")
+  deletedAt        DateTime?    @map("deleted_at")
+
+  company       Company?      @relation(fields: [companyId], references: [id])
+  owner         User?         @relation("ContactOwner", fields: [ownerUserId], references: [id])
+  opportunities Opportunity[]
+  siteVisits    SiteVisit[]
+  samples       Sample[]
+  quotations    Quotation[]
+  projects      Project[]
+  invoices      Invoice[]
+  activities    Activity[]
+  payments      Payment[]
+
+  @@index([lastName])
+  @@map("contacts")
+}
+
+// ─────────────────────────── Pipeline ───────────────────────────
+
+model Opportunity {
+  id                   String        @id @default(cuid())
+  title                String
+  contactId            String        @map("contact_id")
+  companyId            String?       @map("company_id")
+  projectName          String?       @map("project_name")
+  address              String?
+  city                 String?
+  region               GreekRegion   @default(ATTICA)
+  estimatedAreaM2      Float?        @map("estimated_area_m2")
+  surfaceMaterials     String[]      @default([]) @map("surface_materials")
+  requestedFinish      String?       @map("requested_finish")
+  finishCategoryId     FinishCategory? @map("finish_category")
+  serviceTypeId        String?       @map("service_type_id")
+  serviceTypeRef       ServiceType?  @relation(fields: [serviceTypeId], references: [id])
+  estimatedValue       Decimal       @default(0) @map("estimated_value")
+  probability          Int           @default(30)
+  expectedDecisionDate DateTime?     @map("expected_decision_date")
+  source               LeadSource    @default(OTHER)
+  assignedUserId       String?       @map("assigned_user_id")
+  stage                PipelineStage @default(NEW_LEAD)
+  position             Int           @default(0)
+  nextAction           String?       @map("next_action")
+  nextActionDate       DateTime?     @map("next_action_date")
+  lossReason           LossReason?   @map("loss_reason")
+  lossNotes            String?       @map("loss_notes")
+  description          String?
+  internalNotes        String?       @map("internal_notes")
+  lastContactedAt      DateTime?     @map("last_contacted_at")
+  closedAt             DateTime?     @map("closed_at")
+  createdAt            DateTime      @default(now()) @map("created_at")
+  updatedAt            DateTime      @updatedAt @map("updated_at")
+  deletedAt            DateTime?     @map("deleted_at")
+
+  contact     Contact    @relation(fields: [contactId], references: [id])
+  company     Company?   @relation(fields: [companyId], references: [id])
+  assignedTo  User?      @relation("OpportunityAssignee", fields: [assignedUserId], references: [id])
+  siteVisits  SiteVisit[]
+  samples     Sample[]
+  quotations  Quotation[]
+  projects    Project[]
+  activities  Activity[]
+
+  @@index([stage, position])
+  @@map("opportunities")
+}
+
+model ServiceType {
+  id        String  @id @default(cuid())
+  nameEl    String  @map("name_el")
+  nameEn    String  @map("name_en")
+  color     String  @default("#8a7968")
+  active    Boolean @default(true)
+
+  opportunities Opportunity[]
+  projects      Project[]
+
+  @@map("service_types")
+}
+
+// ─────────────────────── Visits & Measurements ───────────────────────
+
+model SiteVisit {
+  id             String      @id @default(cuid())
+  opportunityId  String?     @map("opportunity_id")
+  contactId      String      @map("contact_id")
+  projectId      String?     @map("project_id")
+  title          String
+  scheduledAt    DateTime    @map("scheduled_at")
+  durationMin    Int         @default(60) @map("duration_min")
+  status         VisitStatus @default(SCHEDULED)
+  address        String?
+  city           String?
+  purpose        String?
+  accessNotes    String?     @map("access_notes")
+  workingConditions String?  @map("working_conditions")
+  customerRequirements String? @map("customer_requirements")
+  generalNotes   String?     @map("general_notes")
+  reportPublicToken String?  @unique @map("report_public_token")
+  completedAt    DateTime?   @map("completed_at")
+  assignedUserId String?     @map("assigned_user_id")
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+  deletedAt      DateTime?   @map("deleted_at")
+
+  opportunity  Opportunity? @relation(fields: [opportunityId], references: [id])
+  contact      Contact      @relation(fields: [contactId], references: [id])
+  project      Project?     @relation(fields: [projectId], references: [id])
+  assignedTo   User?        @relation("VisitAssignee", fields: [assignedUserId], references: [id])
+  measurements Measurement[]
+
+  @@index([scheduledAt])
+  @@map("site_visits")
+}
+
+model Measurement {
+  id           String  @id @default(cuid())
+  visitId      String  @map("visit_id")
+  areaName     String  @map("area_name")
+  surfaceType  String? @map("surface_type")
+  material     String?
+  lengthM      Float?  @map("length_m")
+  widthM       Float?  @map("width_m")
+  heightM      Float?  @map("height_m")
+  areaM2       Float?  @map("area_m2")
+  quantityNote String? @map("quantity_note")
+  condition    String?
+  prepRequired String? @map("prep_required")
+  notes        String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  visit SiteVisit @relation(fields: [visitId], references: [id], onDelete: Cascade)
+
+  @@map("measurements")
+}
+
+// ─────────────────── Finishes & Samples ───────────────────
+
+model Finish {
+  id                    String         @id @default(cuid())
+  code                  String         @unique
+  nameEl                String         @map("name_el")
+  nameEn                String         @map("name_en")
+  category              FinishCategory
+  technique             String?
+  applicationMethod     String?        @map("application_method")
+  suitableSurfaces      String[]       @default([]) @map("suitable_surfaces")
+  materialSuppliers     String[]       @default([]) @map("material_suppliers")
+  colorCombinations     String?        @map("color_combinations")
+  texture               String?
+  glossLevel            GlossLevel     @default(MATTE) @map("gloss_level")
+  materialCostPerM2     Decimal        @default(0) @map("material_cost_per_m2")
+  suggestedPricePerM2   Decimal        @default(0) @map("suggested_price_per_m2")
+  labourHoursPerM2      Float          @default(1) @map("labour_hours_per_m2")
+  applicationLayers     Int            @default(3) @map("application_layers")
+  dryingHoursBetweenCoats Int          @default(6) @map("drying_hours_between_coats")
+  instructionsEl        String?        @map("instructions_el")
+  instructionsEn        String?        @map("instructions_en")
+  physicalSampleLocation String?       @map("physical_sample_location")
+  coverPhotoFileId      String?        @map("cover_photo_file_id")
+  galleryFileIds        String[]       @default([]) @map("gallery_file_ids")
+  videoUrl              String?        @map("video_url")
+  active                Boolean        @default(true)
+  archivedAt            DateTime?      @map("archived_at")
+  createdAt             DateTime       @default(now()) @map("created_at")
+  updatedAt             DateTime       @updatedAt @map("updated_at")
+  deletedAt             DateTime?      @map("deleted_at")
+
+  samples Sample[]
+  items   QuotationItem[]
+
+  @@map("finishes")
+}
+
+model Sample {
+  id              String       @id @default(cuid())
+  finishId        String       @map("finish_id")
+  opportunityId   String?      @map("opportunity_id")
+  contactId       String       @map("contact_id")
+  status          SampleStatus @default(REQUESTED)
+  sizeLabel       String?      @map("size_label")
+  productionCost  Decimal      @default(0) @map("production_cost")
+  priceCharged    Decimal      @default(0) @map("price_charged")
+  requestedDate   DateTime     @default(now()) @map("requested_date")
+  deliveryDate    DateTime?    @map("delivery_date")
+  feedback        String?
+  feedbackRating  Int?         @map("feedback_rating")
+  approvedAt      DateTime?    @map("approved_at")
+  rejectedReason  String?      @map("rejected_reason")
+  quotationId     String?      @map("quotation_id")
+  producedById    String?      @map("produced_by_id")
+  notes           String?
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+  deletedAt       DateTime?    @map("deleted_at")
+
+  finish      Finish       @relation(fields: [finishId], references: [id])
+  opportunity Opportunity? @relation(fields: [opportunityId], references: [id])
+  contact     Contact      @relation(fields: [contactId], references: [id])
+  quotation   Quotation?   @relation(fields: [quotationId], references: [id])
+  producedBy  User?        @relation(fields: [producedById], references: [id])
+
+  @@map("samples")
+}
+
+// ─────────────────────── Quotations ───────────────────────
+
+model Quotation {
+  id               String      @id @default(cuid())
+  groupId          String      @map("group_id") // all versions of same quote share group
+  version          Int         @default(1)
+  number           String      @unique
+  status           QuoteStatus @default(DRAFT)
+  contactId        String      @map("contact_id")
+  companyId        String?     @map("company_id")
+  opportunityId    String?     @map("opportunity_id")
+  projectName      String      @map("project_name")
+  projectAddress   String?     @map("project_address")
+  city             String?
+  region           GreekRegion @default(ATTICA)
+  language         String      @default("el")
+  issueDate        DateTime    @default(now()) @map("issue_date")
+  validUntil       DateTime?   @map("valid_until")
+  durationDays     Int?        @map("duration_days")
+  warrantyMonths   Int         @default(24) @map("warranty_months")
+  wastePct         Float       @default(5) @map("waste_pct")
+  markupPct        Float       @default(35) @map("markup_pct")
+  discountPct      Float       @default(0) @map("discount_pct")
+  vatRate          Float       @default(24) @map("vat_rate")
+  subtotal         Decimal     @default(0)
+  discountAmount   Decimal     @default(0) @map("discount_amount")
+  totalNet         Decimal     @default(0) @map("total_net")
+  vatAmount        Decimal     @default(0) @map("vat_amount")
+  totalGross       Decimal     @default(0) @map("total_gross")
+  internalCost     Decimal     @default(0) @map("internal_cost")
+  internalMarginPct Float?     @map("internal_margin_pct")
+  paymentSchedule  Json        @default("[]") @map("payment_schedule")
+  termsEl          String?     @map("terms_el")
+  exclusionsEl     String?     @map("exclusions_el")
+  notesEl          String?     @map("notes_el")
+  publicToken      String      @unique @map("public_token")
+  publicTokenExpiresAt DateTime? @map("public_token_expires_at")
+  sentAt           DateTime?   @map("sent_at")
+  viewedAt         DateTime?   @map("viewed_at")
+  acceptedAt       DateTime?   @map("accepted_at")
+  rejectedAt       DateTime?   @map("rejected_at")
+  rejectionReason  String?     @map("rejection_reason")
+  createdById      String?     @map("created_by_id")
+  createdAt        DateTime    @default(now()) @map("created_at")
+  updatedAt        DateTime    @updatedAt @map("updated_at")
+  deletedAt        DateTime?   @map("deleted_at")
+
+  contact     Contact     @relation(fields: [contactId], references: [id])
+  company     Company?    @relation(fields: [companyId], references: [id])
+  opportunity Opportunity? @relation(fields: [opportunityId], references: [id])
+  createdBy   User?       @relation("QuotationAuthor", fields: [createdById], references: [id])
+  items       QuotationItem[]
+  samples     Sample[]
+  projects    Project[]
+  invoices    Invoice[]
+
+  @@index([groupId, version])
+  @@map("quotations")
+}
+
+model QuotationItem {
+  id           String        @id @default(cuid())
+  quotationId  String        @map("quotation_id")
+  position     Int           @default(0)
+  type         QuoteItemType @default(FINISH_APPLICATION)
+  description  String
+  finishId     String?       @map("finish_id")
+  unit         Unit          @default(SQM)
+  quantity     Decimal       @default(0)
+  unitPrice    Decimal       @map("unit_price")
+  unitCost     Decimal       @default(0) @map("unit_cost")
+  hoursPerUnit Float         @default(0) @map("hours_per_unit")
+  notes        String?
+
+  quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  finish    Finish?   @relation(fields: [finishId], references: [id])
+
+  @@map("quotation_items")
+}
+
+// ─────────────────────── Projects ───────────────────────
+
+model Project {
+  id               String        @id @default(cuid())
+  code             String        @unique
+  name             String
+  quotationId      String?       @unique @map("quotation_id")
+  opportunityId    String?       @map("opportunity_id")
+  contactId        String        @map("contact_id")
+  companyId        String?       @map("company_id")
+  serviceTypeId    String?       @map("service_type_id")
+  managerUserId    String?       @map("manager_user_id")
+  teamUserIds      String[]      @default([]) @map("team_user_ids")
+  status           ProjectStatus @default(PLANNING)
+  contractValue    Decimal       @default(0) @map("contract_value")
+  estimatedCost    Decimal       @default(0) @map("estimated_cost")
+  estimatedHours   Float         @default(0) @map("estimated_hours")
+  address          String?
+  city             String?
+  region           GreekRegion   @default(ATTICA)
+  scopeDescription String?       @map("scope_description")
+  startDate        DateTime?     @map("start_date")
+  plannedEndDate   DateTime?     @map("planned_end_date")
+  actualEndDate    DateTime?     @map("actual_end_date")
+  progressPct      Int           @default(0) @map("progress_pct")
+  qcChecklist      Json          @default("[]") @map("qc_checklist")
+  qcCompletedAt    DateTime?     @map("qc_completed_at")
+  customerApproved Boolean       @default(false) @map("customer_approved")
+  customerApprovedAt DateTime?   @map("customer_approved_at")
+  handoverDocs     Json          @default("[]") @map("handover_docs")
+  feedbackRating   Int?          @map("feedback_rating")
+  feedbackText     String?       @map("feedback_text")
+  notes            String?
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+  deletedAt        DateTime?     @map("deleted_at")
+
+  quotation    Quotation?  @relation(fields: [quotationId], references: [id])
+  opportunity  Opportunity? @relation(fields: [opportunityId], references: [id])
+  contact      Contact     @relation(fields: [contactId], references: [id])
+  company      Company?    @relation(fields: [companyId], references: [id])
+  serviceType  ServiceType? @relation(fields: [serviceTypeId], references: [id])
+  manager      User?       @relation("ProjectManager", fields: [managerUserId], references: [id])
+  tasks        ProjectTask[]
+  workLogs     WorkLog[]
+  siteVisits   SiteVisit[]
+  changeOrders ChangeOrder[]
+  reservations MaterialReservation[]
+  expenses     Expense[]
+  invoices     Invoice[]
+  payments     Payment[]
+  activities   Activity[]
+
+  @@map("projects")
+}
+
+model ProjectTask {
+  id              String       @id @default(cuid())
+  projectId       String?      @map("project_id")
+  title           String
+  description     String?
+  milestone       Boolean      @default(false)
+  dependsOnTaskId String?      @map("depends_on_task_id")
+  status          TaskStatus   @default(TODO)
+  priority        TaskPriority @default(MEDIUM)
+  assigneeUserId  String?      @map("assignee_user_id")
+  dueDate         DateTime?    @map("due_date")
+  completedAt     DateTime?    @map("completed_at")
+  position        Int          @default(0)
+  reminderAt      DateTime?    @map("reminder_at")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+  deletedAt       DateTime?    @map("deleted_at")
+
+  project   Project? @relation(fields: [projectId], references: [id])
+  assignee  User?    @relation(fields: [assigneeUserId], references: [id])
+  dependsOn ProjectTask? @relation("TaskDependency", fields: [dependsOnTaskId], references: [id])
+  dependents ProjectTask[] @relation("TaskDependency")
+
+  @@index([status, dueDate])
+  @@map("project_tasks")
+}
+
+model WorkLog {
+  id        String   @id @default(cuid())
+  projectId String   @map("project_id")
+  userId    String   @map("user_id")
+  date      DateTime @db.Date
+  hours     Float
+  note      String?
+  hasIssue  Boolean  @default(false) @map("has_issue")
+  issueNote String?  @map("issue_note")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@unique([projectId, userId, date])
+  @@map("work_logs")
+}
+
+model ChangeOrder {
+  id          String   @id @default(cuid())
+  projectId   String   @map("project_id")
+  title       String
+  description String?
+  amount      Decimal  @map("amount")
+  cost        Decimal  @default(0)
+  approved    Boolean  @default(false)
+  approvedAt  DateTime? @map("approved_at")
+  approvedByContact Boolean? @map("approved_by_contact")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("change_orders")
+}
+
+// ─────────────────── Calendar & Communication ───────────────────
+
+model CalendarEvent {
+  id             String          @id @default(cuid())
+  title          String
+  type           EventType       @default(OTHER_EVENT)
+  start          DateTime
+  end            DateTime?
+  allDay         Boolean         @default(false) @map("all_day")
+  assignedUserId String?         @map("assigned_user_id")
+  extraUserIds   String[]        @default([]) @map("extra_user_ids")
+  contactId      String?         @map("contact_id")
+  opportunityId  String?         @map("opportunity_id")
+  projectId      String?         @map("project_id")
+  visitId        String?         @map("visit_id")
+  quotationId    String?         @map("quotation_id")
+  invoiceId      String?         @map("invoice_id")
+  taskId         String?         @map("task_id")
+  location       String?
+  notes          String?
+  reminderMinBefore Int          @default(60) @map("reminder_min_before")
+  recurrence     RecurrenceFreq  @default(NONE)
+  recurrenceInterval Int         @default(1) @map("recurrence_interval")
+  recurrenceUntil DateTime?      @map("recurrence_until")
+  reminderSent   Boolean         @default(false) @map("reminder_sent")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+  deletedAt      DateTime?       @map("deleted_at")
+
+  assignedTo User?     @relation(fields: [assignedUserId], references: [id])
+
+  @@index([start])
+  @@map("calendar_events")
+}
+
+model Activity {
+  id            String       @id @default(cuid())
+  kind          ActivityKind
+  direction     String?      // 'in' | 'out' for calls/emails
+  subject       String?
+  body          String?
+  occurredAt    DateTime     @default(now()) @map("occurred_at")
+  durationMin   Int?         @map("duration_min")
+  contactId     String?      @map("contact_id")
+  companyId     String?      @map("company_id")
+  opportunityId String?      @map("opportunity_id")
+  quotationId   String?      @map("quotation_id")
+  projectId     String?      @map("project_id")
+  userId        String?      @map("user_id")
+  systemMeta    Json?        @map("system_meta")
+  createdAt     DateTime     @default(now()) @map("created_at")
+
+  contact     Contact?     @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  opportunity Opportunity? @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  project     Project?     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user        User?        @relation(fields: [userId], references: [id])
+
+  @@index([contactId, occurredAt])
+  @@map("activities")
+}
+
+model Comment {
+  id         String   @id @default(cuid())
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  userId     String   @map("user_id")
+  body       String
+  mentions   String[] @default([])
+  resolved   Boolean  @default(false)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([entityType, entityId])
+  @@map("comments")
+}
+
+model EmailTemplate {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  subjectEl String   @map("subject_el")
+  bodyEl    String   @map("body_el")
+  subjectEn String   @map("subject_en")
+  bodyEn    String   @map("body_en")
+  variables String[] @default([])
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("email_templates")
+}
+
+// ─────────────── Suppliers, Materials & Inventory ───────────────
+
+model Supplier {
+  id          String   @id @default(cuid())
+  name        String
+  contactName String?  @map("contact_name")
+  phone       String?
+  email       String?
+  address     String?
+  vatNumber   String?  @map("vat_number")
+  website     String?
+  notes       String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  materials Material[]
+  purchases Purchase[]
+
+  @@map("suppliers")
+}
+
+model Material {
+  id             String   @id @default(cuid())
+  code           String   @unique
+  nameEl         String   @map("name_el")
+  nameEn         String   @map("name_en")
+  category       String?
+  unit           Unit     @default(KG)
+  supplierId     String?  @map("supplier_id")
+  lastPurchasePrice Decimal @default(0) @map("last_purchase_price")
+  avgPurchasePrice  Decimal @default(0) @map("avg_purchase_price")
+  currentStock   Float    @default(0) @map("current_stock")
+  minStock       Float    @default(0) @map("min_stock")
+  batchTracking  Boolean  @default(false) @map("batch_tracking")
+  technicalDocFileId String? @map("technical_doc_file_id")
+  notes          String?
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+
+  supplier     Supplier?            @relation(fields: [supplierId], references: [id])
+  movements    StockMovement[]
+  reservations MaterialReservation[]
+  purchaseItems PurchaseItem[]
+
+  @@map("materials")
+}
+
+model StockMovement {
+  id          String            @id @default(cuid())
+  materialId  String            @map("material_id")
+  type        StockMovementType
+  quantity    Float
+  projectId   String?           @map("project_id")
+  purchaseId  String?           @map("purchase_id")
+  batchNo     String?           @map("batch_no")
+  note        String?
+  userId      String?           @map("user_id")
+  createdAt   DateTime          @default(now()) @map("created_at")
+
+  material Material @relation(fields: [materialId], references: [id])
+
+  @@map("stock_movements")
+}
+
+model MaterialReservation {
+  id         String            @id @default(cuid())
+  projectId  String            @map("project_id")
+  materialId String            @map("material_id")
+  quantity   Float
+  status     ReservationStatus @default(RESERVED)
+  note       String?
+  createdAt  DateTime          @default(now()) @map("created_at")
+
+  project  Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  material Material @relation(fields: [materialId], references: [id])
+
+  @@map("material_reservations")
+}
+
+model Purchase {
+  id            String   @id @default(cuid())
+  supplierId    String?  @map("supplier_id")
+  projectId     String?  @map("project_id")
+  invoiceNumber String?  @map("invoice_number")
+  date          DateTime
+  total         Decimal  @default(0)
+  notes         String?
+  createdById   String?  @map("created_by_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  deletedAt     DateTime? @map("deleted_at")
+
+  supplier Supplier?      @relation(fields: [supplierId], references: [id])
+  items    PurchaseItem[]
+
+  @@map("purchases")
+}
+
+model PurchaseItem {
+  id         String  @id @default(cuid())
+  purchaseId String  @map("purchase_id")
+  materialId String  @map("material_id")
+  quantity   Float
+  unitPrice  Decimal @map("unit_price")
+  batchNo    String? @map("batch_no")
+
+  purchase Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  material Material @relation(fields: [materialId], references: [id])
+
+  @@map("purchase_items")
+}
+
+// ─────────────── Finance ───────────────
+
+model Expense {
+  id          String          @id @default(cuid())
+  projectId   String?         @map("project_id")
+  category    ExpenseCategory @default(MATERIALS_EXPENSE)
+  description String
+  vendor      String?
+  amount      Decimal         @map("amount")
+  vatAmount   Decimal         @default(0) @map("vat_amount")
+  date        DateTime
+  paid        Boolean         @default(true)
+  receiptFileId String?       @map("receipt_file_id")
+  reimbursed  Boolean         @default(false)
+  createdById String?         @map("created_by_id")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  deletedAt   DateTime?       @map("deleted_at")
+
+  project    Project? @relation(fields: [projectId], references: [id])
+  createdBy  User?    @relation(fields: [createdById], references: [id])
+
+  @@index([date])
+  @@map("expenses")
+}
+
+model Invoice {
+  id           String        @id @default(cuid())
+  number       String        @unique
+  kind         InvoiceKind   @default(FINAL)
+  status       InvoiceStatus @default(DRAFT)
+  quotationId  String?       @map("quotation_id")
+  projectId    String?       @map("project_id")
+  contactId    String        @map("contact_id")
+  companyId    String?       @map("company_id")
+  issueDate    DateTime      @default(now()) @map("issue_date")
+  dueDate      DateTime?     @map("due_date")
+  subtotal     Decimal       @default(0)
+  discountAmount Decimal     @default(0) @map("discount_amount")
+  vatRate      Float         @default(24) @map("vat_rate")
+  vatAmount    Decimal       @default(0) @map("vat_amount")
+  total        Decimal       @default(0)
+  paidTotal    Decimal       @default(0) @map("paid_total")
+  notes        String?
+  publicToken  String?       @unique @map("public_token")
+  remindersSent Int           @default(0) @map("reminders_sent")
+  lastReminderAt DateTime?   @map("last_reminder_at")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  deletedAt    DateTime?     @map("deleted_at")
+
+  quotation Quotation? @relation(fields: [quotationId], references: [id])
+  project   Project?   @relation(fields: [projectId], references: [id])
+  contact   Contact    @relation(fields: [contactId], references: [id])
+  company   Company?   @relation(fields: [companyId], references: [id])
+  items     InvoiceItem[]
+  payments  Payment[]
+
+  @@index([status, dueDate])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id          String        @id @default(cuid())
+  invoiceId   String        @map("invoice_id")
+  position    Int           @default(0)
+  description String
+  unit        Unit          @default(SQM)
+  quantity    Decimal       @default(0)
+  unitPrice   Decimal       @map("unit_price")
+  notes       String?
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@map("invoice_items")
+}
+
+model Payment {
+  id         String        @id @default(cuid())
+  invoiceId  String?       @map("invoice_id")
+  projectId  String?       @map("project_id")
+  contactId  String?       @map("contact_id")
+  amount     Decimal       @map("amount")
+  method     PaymentMethod @default(BANK_TRANSFER)
+  paidAt     DateTime      @default(now()) @map("paid_at")
+  reference  String?
+  notes      String?
+  createdAt  DateTime      @default(now()) @map("created_at")
+  deletedAt  DateTime?     @map("deleted_at")
+
+  invoice Invoice? @relation(fields: [invoiceId], references: [id])
+  project Project? @relation(fields: [projectId], references: [id])
+  contact Contact? @relation(fields: [contactId], references: [id])
+
+  @@index([paidAt])
+  @@map("payments")
+}
+
+// ─────────────── Files, Notifications, Automations, Audit ───────────────
+
+model File {
+  id           String   @id @default(cuid())
+  storagePath  String   @map("storage_path")
+  thumbPath    String?  @map("thumb_path")
+  originalName String   @map("original_name")
+  mimeType     String   @map("mime_type")
+  sizeBytes    Int      @map("size_bytes")
+  width        Int?
+  height       Int?
+  entityType   String?  @map("entity_type")
+  entityId     String?  @map("entity_id")
+  category     String?  // photo | sketch | document | video | receipt
+  caption      String?
+  uploadedById String?  @map("uploaded_by_id")
+  uploadedBy   User?    @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now()) @map("created_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  @@index([entityType, entityId])
+  @@map("files")
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  userId      String           @map("user_id")
+  type        NotificationType @default(GENERIC)
+  title       String
+  body        String?
+  link        String?
+  entityType  String?          @map("entity_type")
+  entityId    String?          @map("entity_id")
+  readAt      DateTime?        @map("read_at")
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+  @@map("notifications")
+}
+
+model AutomationSetting {
+  id        String  @id @default(cuid())
+  key       String  @unique
+  enabled   Boolean @default(true)
+  config    Json    @default("{}")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  lastRunAt DateTime? @map("last_run_at")
+
+  @@map("automation_settings")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?  @map("user_id")
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String?  @map("entity_id")
+  summary    String?
+  beforeData Json?    @map("before_data")
+  afterData  Json?    @map("after_data")
+  ip         String?
+  userAgent  String?  @map("user_agent")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
