@@ -1,4 +1,15 @@
-# ── Chromeway CRM — production image ─────────────────────
+# ── Chromeway CRM — unified production/demo image ────────────
+# Works unchanged in three places:
+#   • VPS via docker-compose.prod.yml        (PORT=3000, no autoseed)
+#   • Hugging Face Spaces free tier          (app_port: 3000, DEMO_AUTOSEED=true)
+#   • Any Docker host
+#
+# Runtime behaviour is driven by env vars (see .env.demo.example):
+#   PORT            listen port            (default 3000)
+#   HOSTNAME        bind address           (default 0.0.0.0)
+#   DEMO_AUTOSEED   "true" → seed Greek demo data ONLY if the
+#                   database has zero users (never wipes data)
+
 FROM node:22-alpine AS base
 RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
@@ -14,9 +25,8 @@ FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-# Dummy DATABASE_URL & AUTH_SECRET for build-time prisma generate only
+# Dummy values used only at build time by `prisma generate`
 ENV DATABASE_URL="postgresql://build:build@localhost:5432/build"
-ENV AUTH_SECRET="build-only-secret-not-used-at-runtime"
 RUN npm run build
 
 # ── Runtime ──
@@ -24,17 +34,21 @@ FROM base AS runner
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV UPLOAD_DIR=/app/uploads
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
 
-RUN addgroup -S chromeway && adduser -S chromeway -G chromeway
-COPY --chown=chromeway:chromeway --from=builder /app/package.json ./package.json
-COPY --chown=chromeway:chromeway --from=deps /app/node_modules ./node_modules
-COPY --chown=chromeway:chromeway --from=builder /app/.next ./.next
-COPY --chown=chromeway:chromeway --from=builder /app/prisma ./prisma
-COPY --chown=chromeway:chromeway --from=builder /app/public ./public
-RUN mkdir -p /app/uploads && chown chromeway:chromeway /app/uploads
+# The image's built-in `node` user already has UID 1000,
+# which is what Hugging Face Spaces expects.
+COPY --from=builder /app/package.json ./package.json
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/public ./public
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN mkdir -p /app/uploads \
+    && chmod +x /usr/local/bin/entrypoint.sh \
+    && chown -R node:node /app
 
-USER chromeway
+USER node
 EXPOSE 3000
-
-# Apply migrations then start
-CMD ["sh", "-c", "npx prisma migrate deploy && npm run start"]
+ENTRYPOINT ["entrypoint.sh"]

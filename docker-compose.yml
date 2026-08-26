@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: chromeway
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-chromeway_dev}
       POSTGRES_DB: chromeway
     ports:
       - "127.0.0.1:5432:5432"
@@ -25,7 +25,7 @@ services:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://chromeway:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/chromeway
+      DATABASE_URL: postgresql://chromeway:${POSTGRES_PASSWORD:-chromeway_dev}@db:5432/chromeway
       AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in .env}
       CRON_SECRET: ${CRON_SECRET:?Set CRON_SECRET in .env}
       APP_URL: ${APP_URL:-http://localhost:3000}

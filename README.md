@@ -1,3 +1,13 @@
+---
+title: Chromeway CRM Demo
+emoji: 🎨
+colorFrom: gray
+colorTo: brown
+sdk: docker
+app_port: 3000
+pinned: false
+---
+
 # Chromeway CRM — User & Setup Guide
 
 Premium studio management CRM for **Chromeway**, a Greek decorative-finishes studio (Athens · Peloponnese · Greece).
@@ -34,6 +44,10 @@ npm run dev                 # start the app → http://localhost:3000
 | collab@chromeway.gr | Collaborator | Projects, calendar, tasks only |
 
 > The seeder prints these accounts again on every run. Demo data includes hotels in Vouliagmeni, restaurants in Glyfada, villas in Ekali/Porto Heli, a completed project with invoices, stock movements, and pipeline entries at every stage.
+
+### 🌐 Free online demo (prototype)
+
+This repo ships with a one-command free hosting recipe (Hugging Face Spaces + Neon Postgres, €0/month): see **[DEPLOY_DEMO.md](./DEPLOY_DEMO.md)** and `.env.demo.example`.
 
 ---
 
