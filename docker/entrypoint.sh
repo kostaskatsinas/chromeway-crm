@@ -5,7 +5,9 @@
 set -e
 
 echo "[entrypoint] applying database migrations…"
-npx prisma migrate deploy
+# Neon pattern: run migrations through the DIRECT endpoint (DIRECT_URL) when
+# provided, because PgBouncer transaction mode limits session features.
+npx prisma migrate deploy --url "${DIRECT_URL:-$DATABASE_URL}"
 
 if [ "$DEMO_AUTOSEED" = "true" ]; then
   echo "[entrypoint] DEMO_AUTOSEED=true → checking whether database is empty…"

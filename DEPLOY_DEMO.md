@@ -21,7 +21,7 @@ Visitors → https://chromeway-demo.onrender.com
 Sign in with GitHub on all three:
 
 - [ ] [render.com](https://dashboard.render.com/register)
-- [ ] [neon.tech](https://neon.tech/signup) → **New project** → name `chromeway` → region **EU Central** → copy the **connection string** (keep `?sslmode=require`)
+- [ ] [neon.tech](https://neon.tech/signup) → **New project** → name `chromeway` → region **EU Central** → copy **both** connection strings (see walkthrough below)
 - [ ] [uptimerobot.com](https://uptimerobot.com) (optional, keeps the demo awake)
 
 ## 2. Create the web service (~5 min)
@@ -34,7 +34,8 @@ Sign in with GitHub on all three:
 | Runtime | **Docker** (uses the repo's `Dockerfile`) |
 | Instance type | **Free** |
 | Health check path | `/api/health` |
-| Env var `DATABASE_URL` | your Neon connection string |
+| Env var `DATABASE_URL` | Neon **pooled** connection string (hostname has `-pooler`) |
+| Env var `DIRECT_URL` | Neon **direct** connection string (pooling toggle OFF) — used for migrations |
 | Env var `AUTH_SECRET` | output of `openssl rand -hex 32` |
 | Env var `DEMO_AUTOSEED` | `true` |
 | Env var `APP_URL` | `https://chromeway-demo.onrender.com` (your URL) |
