@@ -382,7 +382,7 @@ export function Sidebar({ role }: { role: string }) {
         )}
       >
         <div className="h-16 flex items-center px-4 border-b border-white/10 shrink-0">
-          <Link href="/workspace" className="flex items-center gap-3 min-w-0" onClick={() => setOpenMobile(false)}>
+          <Link href="/dashboard" className="flex items-center gap-3 min-w-0" onClick={() => setOpenMobile(false)}>
             <span className="w-10 h-10 rounded-xl bg-clay flex items-center justify-center text-white font-bold text-lg shrink-0">C</span>
             <span className="display text-xl tracking-wide whitespace-nowrap lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity">chromeway<span className="text-clay">.</span></span>
           </Link>
