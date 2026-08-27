@@ -23,7 +23,7 @@ export default function LoginPage() {
     try {
       const res = await api<{ authenticated: boolean }>("/api/auth/session", { body: { email, password } });
       if (res.authenticated) {
-        router.push(params.get("next") || "/workspace");
+        router.push(params.get("next") || "/dashboard");
         router.refresh();
       } else {
         setError(true);

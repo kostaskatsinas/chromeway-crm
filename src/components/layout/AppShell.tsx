@@ -365,7 +365,7 @@ export function Sidebar({ role }: { role: string }) {
     items: g.items.filter((it) => can(role as never, it.cap)),
   })).filter((g) => g.items.length > 0);
   const primaryMobile = [
-    { href: "/workspace", label: "Εργασία", icon: "◎", cap: "dashboard.view" as Capability },
+    { href: "/dashboard", label: "Επισκόπηση", icon: "◫", cap: "dashboard.view" as Capability },
     { href: "/pipeline", label: "Pipeline", icon: "⇉", cap: "pipeline.view" as Capability },
     { href: "/projects", label: "Έργα", icon: "▦", cap: "projects.view" as Capability },
   ].filter((item) => can(role as never, item.cap));
@@ -431,9 +431,6 @@ export function Sidebar({ role }: { role: string }) {
             <span aria-hidden="true" className="text-lg leading-none">{item.icon}</span>{item.label}
           </Link>;
         })}
-        <button type="button" onClick={() => window.dispatchEvent(new Event("cw:open-search"))} className="min-w-14 h-12 rounded-xl flex flex-col items-center justify-center gap-0.5 text-[9px] font-semibold text-white/55" aria-label="Αναζήτηση">
-          <span aria-hidden="true" className="text-lg leading-none">⌕</span>Αναζήτηση
-        </button>
         <button type="button" onClick={() => setOpenMobile(true)} className="min-w-14 h-12 rounded-xl flex flex-col items-center justify-center gap-0.5 text-[9px] font-semibold text-white/55" aria-label="Περισσότερα" aria-expanded={openMobile} aria-controls="primary-sidebar">
           <span aria-hidden="true" className="text-lg leading-none">•••</span>Περισσότερα
         </button>

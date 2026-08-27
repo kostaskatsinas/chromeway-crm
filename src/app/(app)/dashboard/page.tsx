@@ -91,6 +91,26 @@ export default async function DashboardPage() {
         </div>
       </div>
 
+      <section aria-label="Βασικοί δείκτες" className="space-y-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3">
+          {canViewPipeline && <Link href="/pipeline?stage=NEW_LEAD" aria-label="Προβολή νέων leads"><StatCard label="Νέα leads" value={String(stats.kpis.newLeads)} tone="clay" interactive /></Link>}
+          {canViewPipeline && <Link href="/pipeline" aria-label="Προβολή ενεργών ευκαιριών"><StatCard label="Ενεργές ευκαιρίες" value={String(stats.kpis.activeOpps)} interactive /></Link>}
+          {canViewQuotes && <Link href="/quotes?status=SENT" aria-label="Προβολή εκκρεμών προσφορών"><StatCard label="Εκκρεμείς προσφορές" value={String(stats.kpis.pendingQuotes)} tone="amber" interactive /></Link>}
+          {canViewVisits && <Link href="/visits?status=SCHEDULED" aria-label="Προβολή επισκέψεων"><StatCard label="Επισκέψεις 7ήμερο" value={String(stats.kpis.upcomingVisits)} interactive /></Link>}
+          {canViewProjects && <Link href="/projects?status=IN_PROGRESS" aria-label="Προβολή ενεργών έργων"><StatCard label="Ενεργά έργα" value={String(stats.kpis.activeProjects)} tone="olive" interactive /></Link>}
+          {canViewProjects && <Link href="/projects?view=delayed" aria-label="Προβολή καθυστερημένων έργων"><StatCard label="Εκτός προγράμματος" value={String(stats.kpis.delayedProjects)} tone="rust" interactive /></Link>}
+          {canViewTasks && <Link href="/tasks" aria-label="Προβολή ανοιχτών εργασιών"><StatCard label="Ανοιχτές εργασίες" value={String(stats.kpis.openTasks)} interactive /></Link>}
+          {showMoney && <Link href="/finance?tab=invoices&status=OVERDUE" aria-label="Προβολή ανεξόφλητων τιμολογίων"><StatCard label="Ανεξόφλητα" value={`${Math.round(stats.kpis.outstandingInvoices).toLocaleString("el-GR")} €`} tone="rust" interactive /></Link>}
+        </div>
+
+        {showMoney && <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+          <Link href="/finance?tab=payments"><StatCard label="Έσοδα μήνα" value={`${Math.round(stats.kpis.monthRevenue).toLocaleString("el-GR")} €`} tone="olive" interactive /></Link>
+          <Link href="/finance?tab=expenses"><StatCard label="Έξοδα μήνα" value={`${Math.round(stats.kpis.monthExpenses).toLocaleString("el-GR")} €`} tone="amber" interactive /></Link>
+          <Link href="/reports"><StatCard label="Κέρδος μήνα (εκτ.)" value={`${Math.round(stats.kpis.monthProfit).toLocaleString("el-GR")} €`} tone="clay" interactive /></Link>
+          {canViewPipeline && <Link href="/reports"><StatCard label="Μετατροπή leads" value={`${stats.kpis.conversionRate}%`} sub={`Έτος: ${stats.kpis.yearConversion}%`} tone="slate" interactive /></Link>}
+        </div>}
+      </section>
+
       <section className="grid grid-cols-1 xl:grid-cols-3 gap-4 items-start">
         <div className="card overflow-hidden">
           <div className="px-5 py-4 border-b border-line-soft flex items-center justify-between">
@@ -170,20 +190,6 @@ export default async function DashboardPage() {
             {projectHealth.length === 0 && <EmptyState title="Κανένα ενεργό έργο" icon="▦" />}
           </ul>
         </div>}
-      </section>
-
-      <section>
-        <div className="flex items-center justify-between mb-3"><div><p className="eyebrow">Business pulse</p><h2 className="text-lg font-semibold mt-1">Η εικόνα με μία ματιά</h2></div><Link href="/reports" className="text-xs text-clay font-semibold">Αναφορές →</Link></div>
-        <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3">
-          {canViewPipeline && <Link href="/pipeline?stage=NEW_LEAD"><StatCard label="Νέα leads" value={String(stats.kpis.newLeads)} tone="clay" interactive /></Link>}
-          {canViewPipeline && <Link href="/pipeline"><StatCard label="Ενεργές ευκαιρίες" value={String(stats.kpis.activeOpps)} interactive /></Link>}
-          {canViewQuotes && <Link href="/quotes?status=SENT"><StatCard label="Προσφορές" value={String(stats.kpis.pendingQuotes)} tone="amber" interactive /></Link>}
-          {canViewVisits && <Link href="/visits?status=SCHEDULED"><StatCard label="Επισκέψεις" value={String(stats.kpis.upcomingVisits)} interactive /></Link>}
-          {canViewProjects && <Link href="/projects?status=IN_PROGRESS"><StatCard label="Ενεργά έργα" value={String(stats.kpis.activeProjects)} tone="olive" interactive /></Link>}
-          {canViewProjects && <Link href="/projects?view=delayed"><StatCard label="Εκτός πλάνου" value={String(stats.kpis.delayedProjects)} tone="rust" interactive /></Link>}
-          {canViewTasks && <Link href="/tasks"><StatCard label="Εργασίες" value={String(stats.kpis.openTasks)} interactive /></Link>}
-          {showMoney && <Link href="/finance?tab=invoices&status=OVERDUE"><StatCard label="Ανεξόφλητα" value={`${Math.round(stats.kpis.outstandingInvoices / 1000)}k €`} tone="rust" interactive /></Link>}
-        </div>
       </section>
 
       <details className="card group overflow-hidden">
