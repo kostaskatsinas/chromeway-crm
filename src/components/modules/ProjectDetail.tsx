@@ -101,7 +101,7 @@ export function ProjectDetail({
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="sticky top-14 z-30 -mx-4 lg:-mx-6 px-4 lg:px-6 py-3 bg-paper/95 backdrop-blur border-b border-line-soft flex flex-wrap items-center justify-between gap-3">
+      <div className="sticky top-16 z-20 -mx-4 lg:-mx-7 px-4 lg:px-7 py-3 bg-paper/95 backdrop-blur border-b border-line-soft flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="eyebrow">{data.code} · <Link href={`/contacts/${data.contactId}`} className="hover:text-clay underline-offset-2 hover:underline">{data.contactName}</Link></p>
           <h1 className="display text-3xl mt-0.5">{data.name}</h1>

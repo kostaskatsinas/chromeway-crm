@@ -40,7 +40,7 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="sticky top-14 z-30 -mx-4 lg:-mx-6 px-4 lg:px-6 py-3 bg-paper/95 backdrop-blur border-b border-line-soft flex flex-wrap items-start justify-between gap-3">
+      <div className="sticky top-16 z-20 -mx-4 lg:-mx-7 px-4 lg:px-7 py-3 bg-paper/95 backdrop-blur border-b border-line-soft flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-4">
           <Avatar name={`${contact.firstName} ${contact.lastName}`} size={52} color="#9a5b36" />
           <div>
@@ -133,27 +133,29 @@ export default async function ContactDetailPage({ params }: { params: Promise<{ 
       </div>
       </details>
 
-      {/* Timeline + comments + files */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="card p-5 lg:col-span-1"><ActivityTimeline filters={{ contactId: id }} /></div>
-        <div className="card p-5 lg:col-span-1">
-          <Comments entityType="contact" entityId={id} />
-          <div className="mt-6 border-t border-line-soft pt-4">
-            <p className="eyebrow mb-2">Αρχεία & φωτογραφίες</p>
-            <FileGallery entityType="contact" entityId={id} />
+      {/* Timeline-first workspace */}
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.45fr)_minmax(320px,.75fr)] gap-4 items-start">
+        <div className="card p-5 lg:p-6">
+          <div className="mb-4"><p className="eyebrow">Customer timeline</p><h2 className="text-base font-semibold mt-1">Επικοινωνία & ιστορικό</h2></div>
+          <ActivityTimeline filters={{ contactId: id }} />
+        </div>
+        <div className="space-y-4 lg:sticky lg:top-36">
+          <details open className="card p-5 group">
+            <summary className="cursor-pointer list-none eyebrow mb-3 flex items-center justify-between">Βασικά στοιχεία <span aria-hidden="true" className="text-base transition-transform group-open:rotate-90">›</span></summary>
+            <dl className="text-[13px] space-y-2">
+              <Row k="Διεύθυνση" v={[contact.street, contact.city, contact.postalCode].filter(Boolean).join(", ") || "—"} />
+              <Row k="Περιοχή" v={t_reg(contact.region)} />
+              <Row k="Γλώσσα" v={contact.preferredLanguage === "el" ? "Ελληνικά" : "English"} />
+              <Row k="GDPR" v={contact.gdprConsent ? `Ναι (${contact.gdprConsentAt?.toLocaleDateString("el-GR") ?? ""})` : "Όχι"} />
+              <Row k="Marketing" v={contact.marketingOptIn ? "Ναι" : "Όχι"} />
+              <Row k="Υπεύθυνος" v={contact.owner ? `${contact.owner.firstName} ${contact.owner.lastName}` : "—"} />
+            </dl>
+          </details>
+          <div className="card p-5">
+            <Comments entityType="contact" entityId={id} />
+            <div className="mt-6 border-t border-line-soft pt-4"><p className="eyebrow mb-2">Αρχεία & φωτογραφίες</p><FileGallery entityType="contact" entityId={id} /></div>
           </div>
         </div>
-        <details className="card p-5 lg:col-span-1 group">
-          <summary className="cursor-pointer list-none eyebrow mb-2 flex items-center justify-between">Στοιχεία & συναίνεση GDPR <span aria-hidden="true" className="text-base transition-transform group-open:rotate-90">›</span></summary>
-          <dl className="text-[13px] space-y-2">
-            <Row k="Διεύθυνση" v={[contact.street, contact.city, contact.postalCode].filter(Boolean).join(", ") || "—"} />
-            <Row k="Περιοχή" v={t_reg(contact.region)} />
-            <Row k="Γλώσσα επικοινωνίας" v={contact.preferredLanguage === "el" ? "Ελληνικά" : "English"} />
-            <Row k="Συναίνεση GDPR" v={contact.gdprConsent ? `Ναι (${contact.gdprConsentAt?.toLocaleDateString("el-GR") ?? ""})` : "Όχι"} />
-            <Row k="Marketing opt-in" v={contact.marketingOptIn ? "Ναι" : "Όχι"} />
-            <Row k="Υπεύθυνος" v={contact.owner ? `${contact.owner.firstName} ${contact.owner.lastName}` : "—"} />
-          </dl>
-        </details>
       </div>
     </div>
   );

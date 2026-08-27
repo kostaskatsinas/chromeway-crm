@@ -123,7 +123,15 @@ export function Topbar({ user }: { user: { id: string; firstName: string; lastNa
       }
     };
     document.addEventListener("keydown", onShortcut);
-    return () => document.removeEventListener("keydown", onShortcut);
+    const onMobileSearch = () => {
+      setMobileSearchOpen(true);
+      requestAnimationFrame(() => mobileSearchInputRef.current?.focus());
+    };
+    window.addEventListener("cw:open-search", onMobileSearch);
+    return () => {
+      document.removeEventListener("keydown", onShortcut);
+      window.removeEventListener("cw:open-search", onMobileSearch);
+    };
   }, []);
 
   const loadNotifs = async () => {
@@ -152,7 +160,11 @@ export function Topbar({ user }: { user: { id: string; firstName: string; lastNa
   };
 
   return (
-    <header className="sticky top-0 z-40 h-14 bg-paper/90 backdrop-blur border-b border-line-soft flex items-center gap-3 px-4 lg:px-6">
+    <header className="sticky top-0 z-30 h-16 bg-surface/95 backdrop-blur-xl border-b border-line flex items-center gap-3 px-4 lg:px-7">
+      <div className="hidden lg:block min-w-36">
+        <p className="text-[10px] uppercase tracking-[0.16em] text-ink-faint">Workspace</p>
+        <p className="text-[13px] font-semibold mt-0.5">{NAV_GROUPS.flatMap((group) => group.items).find((item) => pathname.startsWith(item.href)) ? t(NAV_GROUPS.flatMap((group) => group.items).find((item) => pathname.startsWith(item.href))!.labelKey) : "Chromeway CRM"}</p>
+      </div>
       {/* Global search */}
       <div ref={searchRef} className="relative w-full max-w-md hidden sm:block">
         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint">⌕</span>
@@ -352,41 +364,36 @@ export function Sidebar({ role }: { role: string }) {
     ...g,
     items: g.items.filter((it) => can(role as never, it.cap)),
   })).filter((g) => g.items.length > 0);
+  const primaryMobile = [
+    { href: "/workspace", label: "Εργασία", icon: "◎", cap: "dashboard.view" as Capability },
+    { href: "/pipeline", label: "Pipeline", icon: "⇉", cap: "pipeline.view" as Capability },
+    { href: "/projects", label: "Έργα", icon: "▦", cap: "projects.view" as Capability },
+  ].filter((item) => can(role as never, item.cap));
 
   return (
     <>
-      {/* Mobile toggle */}
-      <button
-        className="lg:hidden fixed bottom-5 right-5 z-50 w-12 h-12 rounded-full bg-clay text-white shadow-pop text-xl"
-        onClick={() => setOpenMobile(true)}
-        aria-label="Άνοιγμα μενού"
-        aria-expanded={openMobile}
-        aria-controls="primary-sidebar"
-      >
-        ≡
-      </button>
-
       {openMobile && <div className="fixed inset-0 z-40 bg-ink/40 lg:hidden" onClick={() => setOpenMobile(false)} />}
 
       <aside
         id="primary-sidebar"
         className={cn(
-          "fixed inset-y-0 left-0 z-40 w-60 bg-parchment/70 backdrop-blur border-r border-line-soft flex flex-col transition-transform lg:translate-x-0",
+          "group/sidebar fixed inset-y-0 left-0 z-50 w-60 bg-command text-white border-r border-white/10 flex flex-col transition-[transform,width] duration-200 lg:translate-x-0 lg:w-[72px] lg:hover:w-60 shadow-pop lg:shadow-none",
           openMobile ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="h-14 flex items-center px-6 border-b border-line-soft/60">
-          <Link href="/dashboard" className="display text-xl tracking-wide" onClick={() => setOpenMobile(false)}>
-            chromeway<span className="text-clay">.</span>
+        <div className="h-16 flex items-center px-4 border-b border-white/10 shrink-0">
+          <Link href="/workspace" className="flex items-center gap-3 min-w-0" onClick={() => setOpenMobile(false)}>
+            <span className="w-10 h-10 rounded-xl bg-clay flex items-center justify-center text-white font-bold text-lg shrink-0">C</span>
+            <span className="display text-xl tracking-wide whitespace-nowrap lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity">chromeway<span className="text-clay">.</span></span>
           </Link>
-          <button className="ml-auto lg:hidden text-lg" onClick={() => setOpenMobile(false)} aria-label="Κλείσιμο μενού">
+          <button className="ml-auto lg:hidden text-lg text-white/70" onClick={() => setOpenMobile(false)} aria-label="Κλείσιμο μενού">
             ×
           </button>
         </div>
-        <nav aria-label="Κύρια πλοήγηση" className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
+        <nav aria-label="Κύρια πλοήγηση" className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-4 space-y-5">
           {groups.map((g) => (
             <div key={g.titleKey}>
-              <p className="eyebrow px-2 mb-1.5">{t(g.titleKey)}</p>
+              <p className="px-3 mb-1.5 text-[9px] font-bold uppercase tracking-[0.18em] text-white/40 whitespace-nowrap lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity">{t(g.titleKey)}</p>
               <ul className="space-y-0.5">
                 {g.items.map((it) => {
                   const active = pathname.startsWith(it.href);
@@ -396,12 +403,14 @@ export function Sidebar({ role }: { role: string }) {
                         href={it.href}
                         onClick={() => setOpenMobile(false)}
                         className={cn(
-                          "flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors",
-                          active ? "bg-clay text-white shadow-sm" : "text-ink-soft hover:bg-parchment hover:text-ink"
+                          "relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-colors whitespace-nowrap",
+                          active ? "bg-white/12 text-white" : "text-white/60 hover:bg-white/8 hover:text-white"
                         )}
+                        title={t(it.labelKey)}
                       >
-                        <span aria-hidden="true" className={cn("text-base w-5 text-center", active ? "opacity-100" : "opacity-60")}>{it.icon}</span>
-                        {t(it.labelKey)}
+                        {active && <span className="absolute -left-3 inset-y-2 w-0.5 bg-clay rounded-r" />}
+                        <span aria-hidden="true" className="text-[17px] w-5 text-center shrink-0">{it.icon}</span>
+                        <span className="lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity">{t(it.labelKey)}</span>
                       </Link>
                     </li>
                   );
@@ -410,10 +419,25 @@ export function Sidebar({ role }: { role: string }) {
             </div>
           ))}
         </nav>
-        <div className="px-5 py-4 border-t border-line-soft/60">
-          <p className="text-[10.5px] text-ink-faint leading-relaxed">Chromeway CRM v1.0<br />Athens · Peloponnese · Greece</p>
+        <div className="px-4 py-4 border-t border-white/10 overflow-hidden">
+          <p className="text-[10px] text-white/35 leading-relaxed whitespace-nowrap lg:opacity-0 lg:group-hover/sidebar:opacity-100 transition-opacity">Chromeway CRM v1.0<br />Athens · Peloponnese · Greece</p>
         </div>
       </aside>
+
+      <nav aria-label="Κύρια πλοήγηση κινητού" className="lg:hidden fixed inset-x-3 bottom-3 z-40 h-16 rounded-2xl bg-command/95 backdrop-blur-xl border border-white/10 shadow-pop px-2 flex items-center justify-around">
+        {primaryMobile.map((item) => {
+          const active = pathname.startsWith(item.href);
+          return <Link key={item.href} href={item.href} className={cn("min-w-14 h-12 rounded-xl flex flex-col items-center justify-center gap-0.5 text-[9px] font-semibold", active ? "bg-white/12 text-white" : "text-white/55")}>
+            <span aria-hidden="true" className="text-lg leading-none">{item.icon}</span>{item.label}
+          </Link>;
+        })}
+        <button type="button" onClick={() => window.dispatchEvent(new Event("cw:open-search"))} className="min-w-14 h-12 rounded-xl flex flex-col items-center justify-center gap-0.5 text-[9px] font-semibold text-white/55" aria-label="Αναζήτηση">
+          <span aria-hidden="true" className="text-lg leading-none">⌕</span>Αναζήτηση
+        </button>
+        <button type="button" onClick={() => setOpenMobile(true)} className="min-w-14 h-12 rounded-xl flex flex-col items-center justify-center gap-0.5 text-[9px] font-semibold text-white/55" aria-label="Περισσότερα" aria-expanded={openMobile} aria-controls="primary-sidebar">
+          <span aria-hidden="true" className="text-lg leading-none">•••</span>Περισσότερα
+        </button>
+      </nav>
     </>
   );
 }
