@@ -62,7 +62,13 @@ export async function getSession(): Promise<SessionUser | null> {
   if (!user) return null;
   const dbUser = await prisma.user.findFirst({ where: { id: user.id, deletedAt: null } });
   if (!dbUser || !dbUser.active) return null;
-  return { ...user, role: dbUser.role };
+  return {
+    id: dbUser.id,
+    email: dbUser.email,
+    firstName: dbUser.firstName,
+    lastName: dbUser.lastName,
+    role: dbUser.role,
+  };
 }
 
 export async function setSessionCookie(token: string) {

@@ -10,9 +10,9 @@ Primary recap for AI coding assistants working in this repo. Read it **before** 
 
 Internal CRM for **Chromeway**, a Greek premium decorative-finishes studio (Athens/Peloponnese), covering `Lead → Consultation → Site Visit → Sample → Quotation → Approval → Scheduling → Project Execution → QC → Invoice → Payment → After-Sales`. Users: small team (Admin, Sales, Project Manager, Technician, Accountant, External Collaborator).
 
-**Status:** complete MVP — auth+RBAC, dashboard, contacts/companies (GDPR, timeline), pipeline Kanban+list, site visits w/ measurements & printable report, finish catalogue & samples, quotation builder (versions, EL/EN print, public accept/reject links auto-creating projects), projects (task Kanban, work logs, change orders, QC, est-vs-actual), calendar w/ conflict detection, inventory (auto stock updates), invoices/payments/expenses (EUR, 24% VAT), reports + CSV export, settings, automations, notifications, audit log, soft deletion, REST API.
+**Status:** complete MVP plus the merged 12-week UX modernization — auth+RBAC, operations-focused dashboard, contacts/companies (GDPR, timeline), pipeline Kanban+list+attention filters, site visits w/ measurements & printable report, finish catalogue & samples, quotation builder (versions, EL/EN print, public accept/reject links auto-creating projects), projects (task Kanban, work logs, change orders, QC, est-vs-actual), calendar w/ conflict detection, inventory (auto stock updates), invoices/payments/expenses (EUR, 24% VAT), reports + CSV export, settings, automations, notifications, audit log, soft deletion, REST API. The UI now uses a compact expandable desktop command rail, contextual top bar, mobile bottom navigation, timeline-first contact detail, and sticky project controls.
 
-**Missing/partial:** email sending is stubbed to console; no public invoice page; some UI strings remain hardcoded Greek; no login rate limiting or full API/E2E suite.
+**Missing/partial:** email sending is stubbed to console; no public invoice page; some UI strings remain hardcoded Greek; no login rate limiting, MFA, durable background-job queue, CI workflow, or full API/E2E suite. Render Free uploads remain ephemeral.
 
 ## 3. Technology Stack
 
@@ -23,7 +23,7 @@ Internal CRM for **Chromeway**, a Greek premium decorative-finishes studio (Athe
 | DB / ORM | PostgreSQL 16 / Prisma **6.19.3** (35 models, 26 enums) |
 | Auth | Custom JWT via jose (HS256, httpOnly cookie `cw_session`, 7d), bcryptjs |
 | State | Server Components read Prisma directly; client components call REST via `src/lib/client.ts` fetch wrapper; no state library |
-| UI/styling | Tailwind CSS **4.3.3** (`@theme` in `globals.css`), custom warm-neutral design system, network-independent system serif/sans font stacks |
+| UI/styling | Tailwind CSS **4.3.3** (`@theme` in `globals.css`), custom cool-neutral command-center design system, network-independent system sans font stack |
 | Validation | Zod 3.25 (`src/lib/schemas.ts` + inline route schemas) |
 | Files | Local disk (`UPLOAD_DIR`, default `./uploads`) + sharp compression/thumbnails |
 | Testing | Node built-in `node:test` (`--experimental-strip-types`) |
@@ -32,9 +32,9 @@ Internal CRM for **Chromeway**, a Greek premium decorative-finishes studio (Athe
 
 ## 4. Repository Structure
 
-- `prisma/schema.prisma` — full schema; `prisma/migrations/` — 3 migrations; `prisma/seed.ts` — destructive demo-data seeder.
+- `prisma/schema.prisma` — full schema; `prisma/migrations/` — 4 migrations; `prisma/seed.ts` — destructive demo-data seeder.
 - `src/app/(app)/` — authenticated pages, one folder per module; `src/app/api/` — REST handlers; `src/app/{login,forgot-password,reset-password}` and `src/app/public-quote/[token]` — public pages.
-- `src/components/ui.tsx` — shared UI kit; `src/components/modules/` — per-module client components; `src/components/layout/AppShell.tsx` — sidebar/topbar/global search/notifications.
+- `src/components/ui.tsx` — shared UI kit; `src/components/modules/` — per-module client components; `src/components/layout/AppShell.tsx` — expandable command rail, contextual topbar, mobile bottom nav, global search, notifications.
 - `src/lib/`: `auth.ts` (JWT/session), `rbac.ts` (capability matrix), `api.ts` (handler wrapper + audit), `crud.ts` (generic list builder), `resources.ts` (resource registry), `security.ts` (response redaction), `page-auth.ts`, `schemas.ts` (Zod), `calc.ts` (money math), `invoices.ts`/`invoice-state.ts`, `stats.ts`, `automations.ts`, `project-creation.ts`, `quotation-helpers.ts`, `numbering.ts`, `files.ts`, `utils.ts`, `client.ts`.
 - `src/i18n/dictionaries.ts` + `LanguageProvider.tsx` — el/en dictionaries and formatters; `src/middleware.ts` — edge auth guard; `tests/*.test.ts` — unit tests; `scripts/backup.sh` — pg_dump + uploads backup; `.env.example`, `docker-compose.yml`, `Dockerfile`, `README.md`.
 
@@ -46,7 +46,7 @@ Next.js monolith. Pages = Server Components reading Prisma directly; mutations g
 
 Generic CRUD at `/api/{resource}[/{id}]` is registry-driven by `resources.ts` (model name, capabilities per view/edit/delete, Zod schemas, soft-delete flag, includes). Opportunity stage changes and task DONE status have server-side side effects in `[id]/route.ts`.
 
-**Auth:** login POST verifies bcrypt → JWT cookie; middleware verifies signature except `PUBLIC_PATHS` (`/login`, `/forgot-password`, `/reset-password`, `/public*`, `/public-quote`, `/api/auth`, `/api/public`, `/api/cron`); session re-checked against DB (active, not deleted).
+**Auth:** login POST verifies bcrypt → JWT cookie; middleware verifies signature except `PUBLIC_PATHS` (`/login`, `/forgot-password`, `/reset-password`, `/public*`, `/public-quote`, `/api/auth`, `/api/public`, `/api/cron`); session re-checks the user against the DB (active, not deleted) and rehydrates current email/name/role so profile changes are not stale for the JWT lifetime.
 
 **Files:** multipart POST `/api/files` → entity-scoped RBAC check → disk under `UPLOAD_DIR` → sharp `_main.webp` (1600px) + `_thumb.webp` → served only after a matching entity-view capability check at `/api/files/{id}/raw?variant=`.
 
@@ -63,7 +63,7 @@ flowchart LR
 
 ## 6. Database Model
 
-Schema `prisma/schema.prisma`; migrations `20260825075953_init`, `20260825091723_event_end_optional`, `20260826090000_unique_project_quotation` (DB confirmed up to date). Key entities (all money = Decimal(12,2)):
+Schema `prisma/schema.prisma`; migrations `20260825075953_init`, `20260825091723_event_end_optional`, `20260826090000_unique_project_quotation`, `20260827130000_rename_demo_admin` (local DB confirmed up to date). Key entities (all money = Decimal(12,2)):
 
 - **Auth/org:** `User` (unique email, Role enum, hourlyRate, active, deletedAt), `PasswordResetToken`, `Setting` (single-row company JSON).
 - **CRM:** `Contact` (businessType, leadSource, GDPR consent fields, tags[], customFields Json, nullable→Company, owner→User) · `Company` · `Opportunity` (PipelineStage enum ×11, probability, estimatedValue, Kanban position, lossReason, closedAt) · `ServiceType`.
@@ -80,7 +80,7 @@ Schema `prisma/schema.prisma`; migrations `20260825075953_init`, `20260825091723
 
 ## 7. Authentication and Permissions
 
-Email+password → bcrypt compare → HS256 JWT cookie. Reset tokens sha256-hashed with expiry; link logged to console only. Roles: ADMIN (bypasses everything), SALES, PROJECT_MANAGER, TECHNICIAN, ACCOUNTANT, COLLABORATOR.
+Email+password → bcrypt compare → HS256 JWT cookie. Each authenticated server request rehydrates the current email, name, and role from the active DB user. Reset tokens sha256-hashed with expiry; link logged to console only. Roles: ADMIN (bypasses everything), SALES, PROJECT_MANAGER, TECHNICIAN, ACCOUNTANT, COLLABORATOR.
 
 **Backend-enforced (real):** capability matrix `rbac.ts` is checked by shared and custom handlers, and direct-Prisma pages use `requirePageCapability`. Per-resource caps live in `resources.ts`. Sensitive response fields are stripped server-side: quote costs require `quotes.costs`; project/change-order financials require `projects.financials`; nested user relations use safe projections and a defense-in-depth credential redactor. **UI-only:** sidebar/nav filtering in `AppShell.tsx` remains cosmetic and is not trusted for authorization.
 
@@ -90,13 +90,13 @@ Email+password → bcrypt compare → HS256 JWT cookie. Reset tokens sha256-hash
 
 | Module | Works / key files |
 |---|---|
-| Dashboard | KPI cards, monthly revenue/expenses/profit, conversion %, pipeline values, revenue chart, donuts by region/status/service — `(app)/dashboard/page.tsx`, `lib/stats.ts`, `components/charts.tsx` |
-| Contacts & Companies | CRUD, search/filter/pagination; details w/ timeline, comments, files, related records, GDPR stamps — `Contacts.tsx`, `Companies.tsx`, `Timeline.tsx`; `(app)/contacts/**`, `(app)/companies/**` |
-| Pipeline | Drag-drop Kanban across 11 stages + list toggle; stage side effects; loss reasons — `Pipeline.tsx` |
+| Dashboard | Default home (`/` and post-login → `/dashboard`); top KPI grid for leads/quotes/visits/projects/tasks/finance (pipeline-value KPI intentionally omitted); three-column operations command center for today's queue, pipeline attention, and project health; analytics in progressive disclosure — `(app)/dashboard/page.tsx`, `lib/stats.ts`, `components/charts.tsx` |
+| Contacts & Companies | CRUD, search/filter/pagination; timeline-first contact detail with sticky essentials/comments/files, related records, GDPR stamps — `Contacts.tsx`, `Companies.tsx`, `Timeline.tsx`; `(app)/contacts/**`, `(app)/companies/**` |
+| Pipeline | Drag-drop Kanban across 11 stages + list toggle; All/Today/Overdue/Missing-next-action attention filters; urgency borders and next-action visibility; stage side effects; loss reasons — `Pipeline.tsx` |
 | Site visits | Scheduling, mobile measurement editor (auto m²), photos, printable report — `Measurements.tsx`, `Visits.tsx`; `(app)/visits/[id]/page.tsx`+`[id]/report/page.tsx`; `api/visits/[id]/measurements` |
 | Catalogue & samples | Finish CRUD/archive w/ swatch grid; sample tracking + approval flow — `Catalogue.tsx` |
 | Quotations | Builder (finish lines auto-fill prices/costs/hours from catalogue), live totals + internal margin panel, schedules, versions, print EL/EN, anonymous accept/reject page → WON + auto project — `QuoteBuilder.tsx`, `Quotes.tsx`; `(app)/quotes/**`; `api/quotations/**`, `api/public/quote/[token]`, `calc.ts`, `quotation-helpers.ts`, `project-creation.ts`, `app/public-quote/[token]/page.tsx` |
-| Projects | Auto/manual creation, overview tab (progress, QC checklist), tasks Kanban, daily work logs, change orders w/ approval, finance tab (expenses + labour cost = hours×user rates, est-vs-actual bars), photos — `ProjectDetail.tsx`, `Projects.tsx`, `Tasks.tsx`; `api/projects/[id]/finance`, `api/worklogs/upsert` |
+| Projects | Auto/manual creation, sticky status/progress/action header, overview tab (progress, QC checklist), tasks Kanban, daily work logs, change orders w/ approval, finance tab (expenses + labour cost = hours×user rates, est-vs-actual bars), photos — `ProjectDetail.tsx`, `Projects.tsx`, `Tasks.tsx`; `api/projects/[id]/finance`, `api/worklogs/upsert` |
 | Calendar | Day/week/month grids, colour-coded types, assignee conflict warnings, recurrence fields — `modules/Calendar.tsx`; `(app)/calendar/page.tsx` |
 | Tasks | Global Kanban (TODO/IN_PROGRESS/DONE), priorities, milestones, dependencies; completion timestamps server-side — `modules/Tasks.tsx`; `(app)/tasks/page.tsx` |
 | Inventory | Materials w/ low-stock badges, movement modal + history, suppliers, purchase form atomically updating stock & average prices — `modules/Inventory.tsx`; `api/purchases`, `api/inventory/movement` |
@@ -152,9 +152,11 @@ Envelope `{ok,data}`; auth = session cookie unless noted. Implementation: route 
 
 ## 11. Frontend Navigation and Important Screens
 
-Sidebar groups (Sales/Delivery/Operations) are filtered through the RBAC capability matrix. The topbar provides a capability-filtered global Create menu, desktop and full-screen mobile search, a Cmd/Ctrl+K command center (navigation, record search, creation, and quick activity logging), ΕΛ/EN toggle, notifications, and user menu; the mobile FAB opens the sidebar. Activity creation always attributes the signed-in user server-side. Dashboard KPI cards deep-link to filtered work queues. Pipeline (`view`, `mine`, `stage`, `q`, `new`, `open`), projects (`status`, `view=delayed`), quotes/visits (`status`), tasks (`mine`, `priority`, `assignee`), finance (`tab`, `status`, `new`, `open`), and project detail (`tab`) preserve workflow state in URL parameters. Screens: `/dashboard`, `/pipeline`, `/contacts(+/[id])`, `/companies(+/[id])`, `/visits(+/[id], /[id]/report)`, `/catalogue` (tabs), `/quotes(+/new, /[id], /[id]/print)`, `/projects(+/new, /[id])`, `/calendar`, `/tasks`, `/inventory`, `/finance`, `/reports`, `/settings`; public: `/login`, `/forgot-password`, `/reset-password`, `/public-quote/[token]`.
+Desktop navigation is a 72px dark command rail that expands to 240px on hover. Sales/Delivery/Operations groups are filtered through the RBAC capability matrix; the active item has a clay marker. The Chromeway brand routes to `/dashboard`. The 64px contextual topbar provides a capability-filtered Create menu, global search, Cmd/Ctrl+K command center (navigation, record search, creation, and quick activity logging), ΕΛ/EN toggle, notifications, and user menu. Mobile uses a fixed bottom bar with **Επισκόπηση**, capability-aware **Pipeline** and **Έργα**, and **Περισσότερα**; search remains in the topbar and opens full-screen. Activity creation always attributes the signed-in user server-side.
 
-Conventions: index pages are client components fetching `/api/...` (debounced `q`, URL-backed select filters, pagination component); high-density tables can use `DataTableControls.tsx` for localStorage-persisted columns/density and a sticky bulk-action bar. Contacts/projects/quotes use selection + CSV export; project status and quotation expiry support authorized bulk updates. Tables use `.table-base` in `.card` with horizontal scroll; Kanban = HTML5 DnD with optimistic move + refetch plus mobile status selectors and task quick-completion. Forms validate via HTML attrs + server Zod, errors as toasts; detail pages are Server Components feeding one client component each. Project detail has a sticky status/progress/action header and capability-aware read-only presentation. Kit: `ui.tsx` (Button/Input/Select/Modal/Badge/StatusBadge/Tabs/useConfirm/useToast/Pagination/Avatar/StatCard…), `DataTableControls.tsx`, `layout/CommandCenter.tsx`, pickers (`ContactPicker`), charts (`charts.tsx`), gallery (`FileGallery`). Modal supplies dialog semantics, Escape close, focus trapping/restoration, configurable initial focus, and mobile viewport sizing. Design tokens in `globals.css` (@theme): paper/parchment surfaces, ink ramp, clay #9a5b36 accent, olive/rust/amber/slate statuses; centralized `StatusBadge` pairs colour with a symbol; serif `.display` headings; print styles hide `.no-print`.
+`/` and successful login default to `/dashboard`. Dashboard KPI cards deep-link to filtered work queues; the restored finance/KPI set intentionally excludes the **Αξία pipeline** card. The operational section combines today's tasks/visits, opportunities needing attention, and project health; detailed analytics are collapsed by default. Pipeline (`view`, `mine`, `stage`, `q`, `new`, `open`) also offers client-side attention filters for Today, Overdue, and Missing next action. Projects (`status`, `view=delayed`), quotes/visits (`status`), tasks (`mine`, `priority`, `assignee`), finance (`tab`, `status`, `new`, `open`), and project detail (`tab`) preserve workflow state in URL parameters. Screens: `/dashboard`, `/workspace`, `/pipeline`, `/contacts(+/[id])`, `/companies(+/[id])`, `/visits(+/[id], /[id]/report)`, `/catalogue` (tabs), `/quotes(+/new, /[id], /[id]/print)`, `/projects(+/new, /[id])`, `/calendar`, `/tasks`, `/inventory`, `/finance`, `/reports`, `/settings`; public: `/login`, `/forgot-password`, `/reset-password`, `/public-quote/[token]`.
+
+Conventions: index pages are client components fetching `/api/...` (debounced `q`, URL-backed select filters, pagination component); high-density tables can use `DataTableControls.tsx` for localStorage-persisted columns/density and a sticky bulk-action bar. Contacts/projects/quotes use selection + CSV export; project status and quotation expiry support authorized bulk updates. Tables use `.table-base` in `.card` with horizontal scroll; Kanban = HTML5 DnD with optimistic move + refetch plus mobile status selectors and task quick-completion. Forms validate via HTML attrs + server Zod, errors as toasts; detail pages are Server Components feeding one client component each. Contact detail is timeline-first with a sticky essentials/comments/files column. Project detail has a sticky status/progress/action header and capability-aware read-only presentation. Kit: `ui.tsx` (Button/Input/Select/Modal/Badge/StatusBadge/Tabs/useConfirm/useToast/Pagination/Avatar/StatCard…), `DataTableControls.tsx`, `layout/CommandCenter.tsx`, pickers (`ContactPicker`), charts (`charts.tsx`), gallery (`FileGallery`). Modal supplies dialog semantics, Escape close, focus trapping/restoration, configurable initial focus, and mobile viewport sizing. Design tokens in `globals.css` (@theme): cool paper/surface neutrals, dark command surfaces, ink ramp, clay accent, olive/rust/amber/slate statuses; centralized `StatusBadge` pairs colour with a symbol; `.display` uses the system sans stack with strong weight/tracking; print styles hide `.no-print`.
 
 i18n: strings via `t(key)`; flat dicts `dictionaries.ts` (el authoritative, en key-parity tested); enum labels `prefix.VALUE` (`stage.*`, `qstatus.*`, `biz.*`, `reg.*`, `unit.*`). Some newer module strings still hardcoded Greek.
 
@@ -170,9 +172,9 @@ Example file `.env.example`; loaded automatically by Next/Prisma. No browser-exp
 | `UPLOAD_DIR` | File storage dir | optional | server | `./uploads` (created on demand) |
 | `NODE_ENV` | Runtime mode | optional | server | `development` |
 | `CRON_SECRET` | Guards external cron endpoint | yes for compose/external cron | server | Admin session may trigger; anonymous access fails closed if unset |
-| `POSTGRES_PASSWORD` | Compose database password | yes for compose | deploy | no default; Compose interpolation fails if omitted |
+| `POSTGRES_PASSWORD` | Compose database password | required for production; optional locally | deploy | `chromeway_dev` fallback in Compose |
 
-`.env` holds real local values and is gitignored — never commit secrets. Compose interpolates `POSTGRES_PASSWORD`.
+`.env` holds real local values and is gitignored — never commit secrets. Compose falls back to `chromeway_dev` for local PostgreSQL when `POSTGRES_PASSWORD` is absent; never rely on that fallback in an exposed environment.
 
 ## 13. Local Development Commands
 
@@ -197,33 +199,45 @@ npm run db:studio           # prisma studio GUI
 ## 14. Testing and Validation
 
 - Tests: 23 assertions across 6 files — quotation math, invoice state, response security/redaction, RBAC matrix, dictionary parity, and CSV/utils. Pure-function coverage remains the majority; there is no committed browser/API/DB integration suite.
-- Executed 2026-08-26 after the Weeks 3–6 UX implementation: `npm test` → **23 pass / 0 fail**; `npm run typecheck` → exit 0; `npm run lint` → clean; `npm run build` → success. Production-server smoke tests returned 200 for upgraded contacts/projects/quotes/tasks/pipeline routes and APIs. Browser checks verified command search/focus, selectable configurable contact tables, task URL filters, mobile task status controls, and the project sticky header with no fresh console warnings. Role checks verified Accountant activity creation → 403, Collaborator contacts → 403, Collaborator projects → 200, and read-only contact controls for Accountant.
+- Executed 2026-08-27 after the command-center redesign and follow-up navigation changes: `npm test` → **6 files / 23 assertions pass / 0 fail**; `npm run typecheck` → exit 0; `npm run lint` → clean; `npm run build` → success. An authenticated production-server route smoke test returned 200 for `/workspace`, `/dashboard`, `/pipeline`, `/contacts`, and `/projects`. The production preview was started successfully at `localhost:3000`; automatic in-app-browser localhost reload was blocked by the browser URL-safety boundary, so final visual review was completed by the user in the existing local tab.
+- Earlier 2026-08-26 browser checks verified command search/focus, selectable configurable contact tables, task URL filters, mobile task status controls, and the project sticky header with no fresh console warnings. Role checks verified Accountant activity creation → 403, Collaborator contacts → 403, Collaborator projects → 200, and read-only contact controls for Accountant.
 - Live production-server regression checks passed for health, collaborator capability denials, project/change-order financial redaction, nested credential redaction, sales quotation cost redaction, public quote DTO privacy, and fail-closed cron behavior.
 - Still untested automatically: automations engine outcomes, uploads/sharp transformations, calendar conflict edge cases, and destructive seeding integrity.
 
 ## 15. Deployment
 
-Docker Compose, two services: `db` (postgres:16-alpine, healthcheck, volume `chromeway_pgdata`, loopback-only host port) and `app` (built from the multi-stage `Dockerfile`, port 3000, volume `chromeway_uploads` at `/app/uploads`, waits for DB health, runs `prisma migrate deploy` then `next start`). Compose requires `POSTGRES_PASSWORD`, `AUTH_SECRET`, and `CRON_SECRET`; `.dockerignore` excludes secrets, local builds, uploads, and VCS metadata. The runtime uses a non-root user and Docker `COPY --chown` to avoid an expensive recursive ownership pass. TLS via an external reverse proxy is assumed; cookies become `secure` in production. Backups: `scripts/backup.sh <dir>`. Health: `GET /api/health` is public and wired to the Compose healthcheck. The production image was built successfully on 2026-08-26.
+**Hosted prototype:** GitHub `kostaskatsinas/chromeway-crm`, branch `main`, auto-deploys to the Render Docker service `chromeway-crm` at `https://chromeway-crm.onrender.com`; data is stored in Neon Postgres. `DATABASE_URL` is the pooled runtime URL and the entrypoint temporarily overrides it with `DIRECT_URL` for `prisma migrate deploy` when the direct URL is configured. `DEMO_AUTOSEED=true` seeds only when the users table is empty. Render Free has idle spin-down and an ephemeral filesystem, so database data persists in Neon but uploaded files can disappear on restart/redeploy/spin-down. See `DEPLOY_DEMO.md`.
+
+**Self-hosted/VPS:** Docker Compose has two services: `db` (postgres:16-alpine, healthcheck, volume `chromeway_pgdata`, loopback-only host port) and `app` (built from the multi-stage `Dockerfile`, port 3000, volume `chromeway_uploads` at `/app/uploads`, waits for DB health, runs `prisma migrate deploy` then `next start`). Compose requires `AUTH_SECRET` and `CRON_SECRET`; set a strong `POSTGRES_PASSWORD` in every production environment even though a development fallback exists. `.dockerignore` excludes secrets, local builds, uploads, and VCS metadata. The runtime uses a non-root user. TLS via an external reverse proxy is assumed; cookies become `secure` in production. Backups: `scripts/backup.sh <dir>`. Health: `GET /api/health` is public and wired to the Compose healthcheck. The production application build was verified on 2026-08-27; the last documented Docker image build verification remains 2026-08-26.
 
 ## 16. Known Issues, Technical Debt, and Risks
 
 **Fixed during the 2026-08-25/26 reviews** (kept for history): soft-delete query bypass; unsafe inline HTML/SVG uploads; global-search RBAC bypass; missing custom-route/page capability checks; nested user `passwordHash` exposure; quote/project/change-order financial leakage; overbroad anonymous public-quote response; racy quote acceptance/project creation; non-transactional quote item replacement; payment changes not recalculating invoices; non-atomic inventory adjustments; report soft-delete predicates; public payment schedule ×100 display error; invoice due date being discarded on create; untyped generic API filters (including the `active=true` Prisma crash); fail-open production/cron secrets; public Postgres binding; missing Docker `public/`; build-time Google Fonts dependency; broken lint setup; vulnerable dependency versions.
 
-- **High — no version control:** directory is not a git repository; initialize before further work.
+- **High — critical workflow boundaries are still split across generic CRUD operations:** some record updates, stage/task side effects, invoice recalculation, and audit writes are separate calls rather than a single domain transaction (`api/[resource]/[id]/route.ts`). Concurrent failures can leave secondary state or audit history incomplete.
+- **High — no CI or committed integration/E2E suite:** local lint/typecheck/unit/build checks pass, but pull requests do not automatically test real PostgreSQL workflows, route RBAC, uploads, quote acceptance, payments, or inventory.
+- **Medium — automations are synchronous and use heuristic idempotency:** `runAutomations()` performs per-record duplicate queries/writes and has no durable job/outbox table, retry state, or failure dashboard.
+- **Medium — audit logging is best-effort:** `audit()` logs and suppresses its own database failure; this is practical for availability but not a guaranteed compliance ledger.
+- **Medium — optimistic concurrency is absent:** simultaneous edits are last-write-wins for leads, tasks, quotes, projects, payments, and inventory records.
 - **Medium — password reset has no delivery channel:** console log only; non-production returns link in HTTP response (`api/auth/password/route.ts`).
+- **Medium — authentication hardening remains incomplete:** no login/reset rate limiting, MFA, per-session revocation, or explicit CSRF/origin policy for mutations.
 - **Medium — partial English UI:** several module components hardcode Greek strings (Finance, ProjectDetail, Measurements tabs/buttons); parity test covers dictionary keys only.
 - **Medium — implicit timezone:** stats/worklog day bucketing uses server-local time; Europe/Athens not pinned anywhere.
-- **Low — invoice publicToken unused** (no public invoice page); `package.json#prisma` seed config deprecated (Prisma warning); no login rate limiting.
+- **Medium — hosted uploads are ephemeral:** the Render Free prototype stores uploads on the local filesystem, which is lost on restart/redeploy/spin-down; production needs object storage or a persistent paid disk.
+- **Low — generic list sorting is not allowlisted:** `orderBy` is passed dynamically to Prisma and can produce avoidable 500 responses for invalid fields.
+- **Low — invoice publicToken unused** (no public invoice page); `package.json#prisma` seed config is deprecated and emits a Prisma 7 migration warning.
 
 ## 17. Recommended Next Steps
 
-1. Initialize version control and commit the verified baseline.
-2. Integrate an email provider for reset links and quotation sends.
-3. Add committed integration/E2E tests for route RBAC, uploads, quote acceptance concurrency, and payment persistence/recalculation.
-4. Wire lint, typecheck, tests, audit, and Docker build into CI.
-5. Complete English translations of hardcoded strings; extend parity checks to components.
-6. Pin `Europe/Athens` for server-side date bucketing.
-7. Build a public invoice view using `Invoice.publicToken`; add accountant PDF/CSV exports.
+1. Introduce explicit domain/application services and transaction boundaries for opportunity transitions, quote acceptance, payments, inventory, and project completion; make sensitive audit writes part of those transactions.
+2. Add PostgreSQL-backed integration tests and browser E2E coverage for route RBAC, uploads, quote acceptance concurrency, payment recalculation, inventory, and critical mobile flows; run lint/typecheck/tests/migrations/build in CI.
+3. Harden authentication with rate limits, session revocation/rotation, administrator/accountant MFA, and an explicit CSRF/origin policy; integrate an email provider for reset links and quotation sends.
+4. Move automations to a durable job/outbox model with idempotency keys, retry/backoff state, batching, and an administrator failure view.
+5. Add structured logs, correlation IDs, error monitoring, slow-query metrics, off-site encrypted backups, and tested restore procedures.
+6. Move hosted uploads to S3-compatible object storage with signed access, quotas, metadata stripping, lifecycle rules, and orphan cleanup.
+7. Add optimistic concurrency to high-impact records, allowlist sort fields, and add query-driven indexes after measuring production queries.
+8. Complete English translations, pin `Europe/Athens` for business-day bucketing, and implement GDPR export/anonymization/retention workflows.
+9. Build a public invoice/customer portal and add accountant PDF/CSV or Greek accounting integration.
 
 ## 18. Safe Modification Guidelines for Future AI Agents
 
@@ -258,12 +272,13 @@ Docker Compose, two services: `db` (postgres:16-alpine, healthcheck, volume `chr
 
 ## 20. Current Repository Snapshot
 
-- **Generated/updated:** 2026-08-26
-- **Git:** not initialized — no branch/commit history (`git status` → "not a git repository"); working-tree cleanliness N/A
+- **Generated/updated:** 2026-08-27
+- **Git:** initialized and synchronized before this documentation refresh. `main` tracks `origin/main`; PR #1 merged the command-center redesign. `codex/command-center-ui` tracks its remote review branch. This Markdown refresh is the only current working-tree change set.
 - **Application version:** `chromeway-crm` 1.0.0
 - **Installed versions:** next 15.5.24, react 19.2.8, @prisma/client 6.19.3, tailwindcss 4.3.3, zod 3.25.76, typescript 5.9.3, eslint 9.39.5, sharp 0.35.3
-- **Migrations:** all 3 applied; local Compose DB is seeded with demo data
-- **Last verification:** `npm test` 23/23 assertions pass · `npm run typecheck` clean · `npm run lint` exit 0 · `npm audit` 0 vulnerabilities · production build and Docker image build succeed · live RBAC/privacy/health/cron smoke checks pass
+- **Migrations:** all 4 applied locally; local Compose DB is seeded with demo data. The fourth data-only migration renames the seeded administrator to Κώστας Κατσίνας and updates the seeded mention; it will apply to hosted databases on their next deployment.
+- **Last application verification (2026-08-27):** `npm test` 23/23 assertions pass · `npm run typecheck` clean · `npm run lint` clean · production build succeeds · authenticated core-route smoke checks pass. Last documented dependency audit (0 vulnerabilities) and Docker image build are from 2026-08-26.
+- **Hosted demo:** `https://chromeway-crm.onrender.com` (Render Docker Free instance + Neon Postgres; `main` auto-deploy; local uploads ephemeral).
 
 ## 21. Context Refresh Rules
 

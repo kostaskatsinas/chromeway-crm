@@ -7,7 +7,9 @@ It manages the complete customer and project lifecycle:
 
 **Lead → Consultation → Site Visit → Sample → Quotation → Approval → Scheduling → Project Execution → Quality Control → Invoice → Payment → After-Sales**
 
-Greek is the default interface language with full English support. Currency EUR, VAT 24%, Greek date/number formats.
+Greek is the default interface language, with English dictionary coverage across the core shell and workflows; some newer operational labels remain Greek. Currency EUR, VAT 24%, Greek date/number formats.
+
+**Current status (27 August 2026):** the complete MVP and the command-center UX redesign are merged into `main`. The redesign adds a compact expandable navigation rail, an operations-focused overview, attention filters in Pipeline, timeline-first contact details, improved project hierarchy, and a mobile bottom navigation. The deployed prototype is available at [chromeway-crm.onrender.com](https://chromeway-crm.onrender.com).
 
 ---
 
@@ -36,9 +38,9 @@ npm run dev                 # start the app → http://localhost:3000
 
 > The seeder prints these accounts again on every run. Demo data includes hotels in Vouliagmeni, restaurants in Glyfada, villas in Ekali/Porto Heli, a completed project with invoices, stock movements, and pipeline entries at every stage.
 
-### 🌐 Free online demo (prototype)
+### 🌐 Online demo (prototype)
 
-This repo ships with a €0/month hosting recipe (Render free Docker + Neon Postgres): see **[DEPLOY_DEMO.md](./DEPLOY_DEMO.md)** and `.env.demo.example`.
+This repo ships with a Render Docker + Neon Postgres prototype recipe: see **[DEPLOY_DEMO.md](./DEPLOY_DEMO.md)**. The current service uses Render's Free instance behavior, including idle spin-down and an ephemeral local filesystem; it is a demonstration environment, not production hosting.
 
 ---
 
@@ -54,13 +56,15 @@ This repo ships with a €0/month hosting recipe (Render free Docker + Neon Post
 
 ## 3. Understanding the Interface
 
-- **Left sidebar** groups modules: *Πωλήσεις* (Sales), *Παραγωγή* (Delivery), *Λειτουργίες* (Operations). Items you lack permission for are hidden by role.
+- **Desktop command rail**: the compact dark rail groups modules into *Πωλήσεις* (Sales), *Παραγωγή* (Delivery), and *Λειτουργίες* (Operations). Hover it to reveal labels. Items you lack permission for are hidden by role. Clicking the Chromeway brand opens **Επισκόπηση** (`/dashboard`).
 - **Top bar**: role-aware **Δημιουργία** menu, global search (type ≥2 letters — finds contacts, companies, opportunities, quotes, projects, visits), language toggle, notification bell 🔔, user menu. Press **Cmd/Ctrl+K** to open the command center for navigation, record search, creation shortcuts, or one-step activity logging.
 - **Notifications** arrive automatically from automations and events (stale quotes, low stock, upcoming payments…). Bell shows unread count; open one to jump to the record; *Σήμανση όλων ως αναγνωσμένα* marks all read.
-- Dashboard KPI cards open the corresponding filtered work list. Pipeline, quotes, visits, projects, and finance keep their active filters in the URL, so views can be bookmarked or shared.
+- **Επισκόπηση / Dashboard** is the default home after login. KPI cards appear first (leads, opportunities, quotes, visits, projects, tasks, outstanding invoices, monthly revenue/expenses/profit, and conversion). The monetary **Αξία pipeline** KPI is intentionally omitted. Below, the operations command center combines today's work, pipeline attention, project health, and progressively disclosed analytics.
+- **Pipeline attention** filters isolate records due today, overdue, or missing a next action. Pipeline, quotes, visits, projects, tasks, and finance keep their active filters in the URL, so views can be bookmarked or shared.
 - Contacts, projects, and quotes support row selection, CSV export, persistent column visibility, and comfortable/compact density. Authorized users also get safe bulk status workflows for projects and expired quotations.
+- Contact details prioritize the activity timeline, with essential information, internal comments, and files in a sticky side column. Project details keep status, progress, and primary actions visible in a sticky header.
 - The task board supports keyword, assignee, priority, and “my tasks” filters; desktop cards have one-click completion and mobile cards expose a status selector.
-- Mobile/tablet: a floating **≡** button opens the sidebar; search expands to a full-screen mobile panel, modals fit the viewport, and Pipeline cards provide a touch-friendly status selector.
+- **Mobile/tablet**: the bottom navigation starts with **Επισκόπηση**, followed by **Pipeline**, **Έργα**, and **Περισσότερα**. Search remains available from the top bar and expands to a full-screen panel. Modals fit the viewport, and Pipeline cards provide a touch-friendly status selector.
 
 ---
 
@@ -281,6 +285,8 @@ docker compose up -d --build
 ```
 
 App serves on :3000 behind your TLS reverse proxy; migrations apply automatically; volumes persist DB and uploads. Schedule daily backups via cron.
+
+For the current hosted prototype (`main` → Render auto-deploy, Neon database, ephemeral uploads), follow [`DEPLOY_DEMO.md`](./DEPLOY_DEMO.md).
 
 **Health monitoring:** `GET /api/health` → 200 `{status: "healthy", db: "up", latencyMs}` or **503** when the database is unreachable. It's public (no auth), used by the Docker healthcheck, and safe to plug into uptime monitors.
 

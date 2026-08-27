@@ -21,7 +21,7 @@ test("utils — cn joins classes", () => {
 });
 
 test("utils — initials & fullName", () => {
-  assert.equal(initials("Νίκος", "Παπαδόπουλος"), "ΝΠ");
+  assert.equal(initials("Κώστας", "Κατσίνας"), "ΚΚ");
   assert.equal(fullName({ firstName: "Ελένη", lastName: "Μαρκογιάννη" }), "Ελένη Μαρκογιάννη");
   assert.equal(fullName({}), "—");
 });

@@ -44,7 +44,7 @@ async function main() {
   const [admin, sales, pm, tech, accountant, collab] = await Promise.all(
     (
       [
-        ["admin@chromeway.gr", "Νίκος", "Παπαδόπουλος", "ADMIN", "#9a5b36", "+30 6944 123456", 35],
+        ["admin@chromeway.gr", "Κώστας", "Κατσίνας", "ADMIN", "#9a5b36", "+30 6944 123456", 35],
         ["sales@chromeway.gr", "Ελένη", "Μαρκογιάννη", "SALES", "#5f7050", "+30 6932 555111", 25],
         ["pm@chromeway.gr", "Δημήτρης", "Αναστασίου", "PROJECT_MANAGER", "#5b6b7a", "+30 6977 444222", 30],
         ["tech@chromeway.gr", "Γιώργος", "Λάμπρου", "TECHNICIAN", "#b08a3e", "+30 6981 777333", 20],
@@ -482,7 +482,7 @@ async function main() {
   await prisma.activity.create({ data: { kind: "EMAIL" as never, direction: "in", subject: "RE: Αποστολή προσφοράς — ενδιαφέρον, θα επανέλθουμε", occurredAt: daysAgo(6), contactId: nikolas.id, quotationId: quoteRestaurant.id, userId: sales.id } });
 
   // ─── Comments ───
-  await prisma.comment.create({ data: { entityType: "opportunity", entityId: opps.hotelLobby.id, userId: pm.id, body: "Το υποστρώμα χρειάζεται isolation αστάρι — το έχω βάλει στην προσφορά. @Νίκος επιβεβαίωσε τη διαθεσιμότητα ομάδας;", mentions: ["Νίκος"] as never } });
+  await prisma.comment.create({ data: { entityType: "opportunity", entityId: opps.hotelLobby.id, userId: pm.id, body: "Το υποστρώμα χρειάζεται isolation αστάρι — το έχω βάλει στην προσφορά. @Κώστας επιβεβαίωσε τη διαθεσιμότητα ομάδας;", mentions: ["Κώστας"] as never } });
   await prisma.comment.create({ data: { entityType: "opportunity", entityId: opps.hotelLobby.id, userId: admin.id, body: "Ναι, ο Γιώργος + ο Στέλιος είναι διαθέσιμοι από τις 10 Οκτωβρίου." } });
 
   // ─── Email templates ───
