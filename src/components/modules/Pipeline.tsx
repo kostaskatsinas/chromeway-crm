@@ -150,6 +150,7 @@ export function PipelineBoard({ currentUserId, canEdit }: { currentUserId: strin
   const [q, setQ] = useState("");
   const [mine, setMine] = useState(false);
   const [stageFilter, setStageFilter] = useState("");
+  const [attentionFilter, setAttentionFilter] = useState<"all" | "today" | "overdue" | "missing">("all");
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -232,10 +233,19 @@ export function PipelineBoard({ currentUserId, canEdit }: { currentUserId: strin
     return map;
   }, [opps]);
 
-  const filtered = (list: Opp[]) => list.filter((opportunity) =>
-    (!mine || opportunity.assignedTo?.id === currentUserId) &&
-    (!stageFilter || opportunity.stage === stageFilter)
-  );
+  const filtered = (list: Opp[]) => list.filter((opportunity) => {
+    if (mine && opportunity.assignedTo?.id !== currentUserId) return false;
+    if (stageFilter && opportunity.stage !== stageFilter) return false;
+    if (attentionFilter === "missing") return !opportunity.nextAction || !opportunity.nextActionDate;
+    if (attentionFilter === "all") return true;
+    if (!opportunity.nextActionDate) return false;
+    const due = new Date(opportunity.nextActionDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    due.setHours(0, 0, 0, 0);
+    if (attentionFilter === "overdue") return due < today;
+    return due.getTime() === today.getTime();
+  });
 
   const nextActionMeta = (o: Opp) => {
     if (!o.nextActionDate) return { label: o.nextAction ? "Χωρίς ημερομηνία" : "Χωρίς επόμενη ενέργεια", className: "text-amber-warm" };
@@ -257,7 +267,7 @@ export function PipelineBoard({ currentUserId, canEdit }: { currentUserId: strin
       onDragStart={() => setDragId(o.id)}
       onDragEnd={() => { setDragId(null); setDragOverStage(null); }}
       onClick={() => { setEditing(o); setFormOpen(true); }}
-      className={`kanban-card card p-3 mb-2 select-none ${canEdit ? "cursor-grab" : "cursor-default"} ${dragId === o.id ? "opacity-40" : ""}`}
+      className={`kanban-card card p-3 mb-2 select-none border-l-2 ${nextActionMeta(o).className === "text-rust" ? "border-l-rust" : !o.nextActionDate ? "border-l-amber-warm" : "border-l-transparent"} ${canEdit ? "cursor-grab" : "cursor-default"} ${dragId === o.id ? "opacity-40" : ""}`}
     >
       <p className="text-[13px] font-semibold leading-snug">{o.title}</p>
       <p className="text-[11px] text-ink-faint mt-0.5">{o.contact.firstName} {o.contact.lastName}{o.city ? ` · ${o.city}` : ""}</p>
@@ -332,6 +342,13 @@ export function PipelineBoard({ currentUserId, canEdit }: { currentUserId: strin
           <button onClick={() => { setView("list"); updateViewUrl({ view: "list" }); }} className={`px-3 py-1.5 text-[12px] font-medium ${view === "list" ? "bg-clay text-white" : "bg-surface"}`}>{t("pipeline.list")}</button>
         </div>
         {canEdit && <Button onClick={() => { setEditing(null); setPresetContact(undefined); setFormOpen(true); }}>+ {t("opp.newOpportunity")}</Button>}
+      </div>
+
+      <div className="flex items-center gap-1 overflow-x-auto pb-1" role="group" aria-label="Εστίαση pipeline">
+        <span className="text-[10px] uppercase tracking-wider text-ink-faint font-semibold mr-2 shrink-0">Εστίαση</span>
+        {([
+          ["all", "Όλα"], ["today", "Σήμερα"], ["overdue", "Εκπρόθεσμα"], ["missing", "Χωρίς επόμενη κίνηση"],
+        ] as const).map(([value, label]) => <button key={value} type="button" aria-pressed={attentionFilter === value} onClick={() => setAttentionFilter(value)} className={`px-3 py-1.5 rounded-full border text-[11.5px] font-semibold whitespace-nowrap ${attentionFilter === value ? "bg-command text-white border-command" : "bg-surface border-line text-ink-soft hover:border-clay"}`}>{label}</button>)}
       </div>
 
       {!opps ? (
